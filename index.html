@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AMMO — Aerial Mesh Mission Orchestration · Simulator</title>
+<link rel="stylesheet" href="/styles/main.css">
+</head>
+<body>
+
+<div id="global-tip"></div>
+<div id="topbar">
+  <div id="logo">AMMO<span>AERIAL MESH MISSION ORCHESTRATION</span></div>
+  <div class="tb-div"></div>
+  <div id="mission-clock">T+00:00</div>
+  <div class="tb-div"></div>
+  <div class="stat-block"><span class="lbl">Drones</span><span class="val ok" id="stat-alive">0</span></div>
+  <div class="stat-block"><span class="lbl">Leaders</span><span class="val ok" id="stat-leaders">0</span></div>
+  <div class="stat-block"><span class="lbl">Lost</span><span class="val" id="stat-dead">0</span></div>
+  <div class="stat-block"><span class="lbl">Elections</span><span class="val" id="stat-elections">0</span></div>
+  <div class="stat-block"><span class="lbl">Mesh Links</span><span class="val ok" id="stat-links">0</span></div>
+  <div class="stat-block"><span class="lbl">Avg Battery</span><span class="val ok" id="stat-batt">100%</span></div>
+  <div class="stat-block"><span class="lbl">Comms</span><span class="val ok" id="stat-comms">100%</span></div>
+  <div class="tb-div"></div>
+  <select id="scenario-select" class="hw-select" style="min-width:140px;font-size:10px;">
+    <option value="">-- Scenarios --</option>
+  </select>
+  <button id="btn-scenario-load" style="font-size:10px;padding:3px 7px;">LOAD</button>
+  <button id="btn-scenario-save" style="font-size:10px;padding:3px 7px;border-color:var(--ok);color:var(--ok)">SAVE</button>
+  <button id="btn-scenario-export" style="font-size:10px;padding:3px 7px;">EXPORT</button>
+  <button id="btn-scenario-import" style="font-size:10px;padding:3px 7px;">IMPORT</button>
+  <input type="file" id="scenario-file-input" accept=".json,.ammo.json" style="display:none;">
+  <button id="btn-scenario-delete" style="font-size:10px;padding:3px 7px;border-color:var(--alert);color:var(--alert)">DEL</button>
+  <button id="btn-batch" style="font-size:10px;padding:3px 7px;border-color:var(--asl);color:var(--asl)">BATCH RUN</button>
+  <button id="btn-replay" style="font-size:10px;padding:3px 7px;border-color:#ffdc00;color:#ffdc00;">REPLAY</button>
+  <button id="btn-faults" style="font-size:10px;padding:3px 7px;border-color:var(--alert);color:var(--alert);">FAULTS</button>
+  <div id="controls-bar">
+    <button id="btn-pause">&#9646;&#9646; PAUSE</button>
+    <span style="color:var(--muted);font-size:10px">SPD</span>
+    <button class="spd" id="sp-05">1/2x</button>
+    <button class="spd active" id="sp-1">1x</button>
+    <button class="spd" id="sp-2">2x</button>
+    <button class="spd" id="sp-5">5x</button>
+    <button id="btn-map-toggle" style="border-color:#00ffcc;color:#00ffcc;font-size:10px;padding:3px 7px;">MAP</button>
+    <button id="btn-reset">&#8635; RESET</button>
+  </div>
+</div>
+
+<div id="main">
+  <!-- LEFT PANEL -->
+  <div id="left-panel">
+
+    <div class="psec">
+      <div class="ptitle">Fleet Configuration</div>
+      <div class="crow">
+        <label>Squads</label>
+        <input type="range" min="1" max="4" value="2" id="cfg-squads">
+        <span class="badge" style="color:var(--gl);border-color:var(--gl)" id="val-squads">2</span>
+      </div>
+      <div class="crow">
+        <label>Workers/Squad</label>
+        <input type="range" min="2" max="8" value="4" id="cfg-workers">
+        <span class="badge" style="color:var(--w);border-color:var(--w)" id="val-workers">4</span>
+      </div>
+      <div class="crow">
+        <label>Relay Nodes</label>
+        <input type="range" min="0" max="6" value="2" id="cfg-relays">
+        <span class="badge" style="color:var(--rl);border-color:var(--rl)" id="val-relays">2</span>
+      </div>
+    </div>
+
+    <div class="psec">
+      <div class="ptitle">AI Capabilities</div>
+      <div class="trow">
+        <input type="checkbox" id="ai-gl" checked>
+        <div class="dot" style="background:var(--gl)"></div>
+        <label for="ai-gl">AI Group Leader</label>
+        <span class="info-icon" data-tip="<b class=&quot;role-name&quot;>GL — Group Leader</b><br>Top of hierarchy. Commands all squads. When AI-enabled runs an onboard reasoning model to adapt mission goals in real time — no human in loop. Diamond shape on map.">i</span>
+      </div>
+      <div class="trow">
+        <input type="checkbox" id="ai-sl">
+        <div class="dot" style="background:var(--sl)"></div>
+        <label for="ai-sl">AI Squad Leaders</label>
+        <span class="info-icon" data-tip="<b class=&quot;role-name&quot;>SL — Squad Leader</b><br>Commands 3-8 workers within one squad. Routes intel upward to GL. When AI-enabled (ASL) can adapt squad tactics autonomously without waiting for GL. Circle on map.">i</span>
+      </div>
+      <div class="trow">
+        <input type="checkbox" id="shadow-on" checked>
+        <div class="dot" style="background:var(--sh)"></div>
+        <label for="shadow-on">Shadow Nodes</label>
+        <span class="info-icon" data-tip="<b class=&quot;role-name&quot;>SH — Shadow Node</b><br>Hot-standby for its leader. Continuously receives full mission state via SYNC_STATE packets. If leader is destroyed, Shadow wins election with +40 score bonus and takes over with ZERO state loss. Hexagon shape on map.">i</span>
+      </div>
+      <div class="trow">
+        <div class="dot" style="background:var(--rl)"></div>
+        <label>Relay Nodes</label>
+        <span class="info-icon" data-tip="<b class=&quot;role-name&quot;>RL — Relay Node</b><br>Pure RF mesh extender. No mission payload, no AI. Forwards packets to bridge gaps in coverage. Critical in jammed or GPS-denied corridors. Square shape on map.">i</span>
+      </div>
+      <div class="trow">
+        <div class="dot" style="background:var(--w)"></div>
+        <label>Worker Drones</label>
+        <span class="info-icon" data-tip="<b class=&quot;role-name&quot;>W — Worker</b><br>Executes assigned tasks: surveillance, strike, sensor collection. Reports status upward to SL every beacon cycle. Lowest compute, deterministic firmware only. Circle (small) on map.">i</span>
+      </div>
+    </div>
+
+
+    <div class="psec">
+      <div class="ptitle" style="display:flex;align-items:center;justify-content:space-between;">
+        Hardware Config
+        <button id="btn-view-specs" style="font-size:9px;padding:2px 6px;letter-spacing:0;border-color:var(--gl);color:var(--gl)">VIEW ALL SPECS</button>
+      </div>
+      <div class="hw-row"><label>GL Type</label><select class="hw-select" id="hw-gl">
+        <option value="COMMAND_NODE">Command Node (x86)</option>
+        <option value="JETSON_AGX">Jetson AGX Orin</option>
+        <option value="JETSON_NX">Jetson Orin NX</option>
+      </select></div>
+      <div class="hw-row"><label>SL Type</label><select class="hw-select" id="hw-sl">
+        <option value="JETSON_NX">Jetson Orin NX</option>
+        <option value="JETSON_NANO">Jetson Nano</option>
+        <option value="RPI5">RPi5 + NPU</option>
+      </select></div>
+      <div class="hw-row"><label>Worker Type</label><select class="hw-select" id="hw-worker">
+        <option value="STM32_BASIC">STM32 Basic</option>
+        <option value="STM32_ADV">STM32 Advanced</option>
+        <option value="RPI_ZERO">RPi Zero 2W</option>
+        <option value="JETSON_NANO">Jetson Nano</option>
+      </select></div>
+      <div class="hw-row"><label>Relay Type</label><select class="hw-select" id="hw-relay">
+        <option value="ESP32_MESH">ESP32 Mesh</option>
+        <option value="STM32_BASIC">STM32 Basic</option>
+      </select></div>
+    </div>
+    <div class="psec">
+      <div class="ptitle">Environment</div>
+      <div class="crow">
+        <label>RF Range</label>
+        <input type="range" min="60" max="200" value="130" id="cfg-range">
+        <span class="badge" style="color:var(--sl);border-color:var(--sl)" id="val-range">130</span>
+      </div>
+      <div class="crow">
+        <label>RF Noise %</label>
+        <input type="range" min="0" max="100" value="10" id="cfg-noise">
+        <span class="badge" style="color:var(--warn);border-color:var(--warn)" id="val-noise">10</span>
+      </div>
+      <div class="crow">
+        <label>Batt Drain
+          <span class="info-icon" style="vertical-align:middle" data-tip="Battery drains in real simulation time. At drain=5 a drone lasts ~33 min of sim time at 1x speed. At drain=20 it lasts ~8 min. AI nodes drain 40% faster. Watch the colored arc around each drone — orange=low, red=critical.">i</span>
+        </label>
+        <input type="range" min="1" max="30" value="5" id="cfg-drain">
+        <span class="badge" style="color:var(--warn);border-color:var(--warn)" id="val-drain">5</span>
+      </div>
+    </div>
+
+    <div class="psec">
+      <div class="ptitle">Place on Map (click canvas)</div>
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <button class="sbtn" id="mode-route" style="border-color:var(--ok);color:var(--ok)">&#9654; Set Mission Route</button>
+        <button class="sbtn" id="btn-clear-route" style="color:var(--muted)">&#8960; Clear Route</button>
+        <button class="sbtn" id="btn-start-mission" style="border-color:var(--gl);color:var(--gl);margin-top:4px;">&#9654; START MISSION</button>
+        <button class="sbtn" id="btn-advance-phase" style="color:var(--muted);margin-top:2px;">&#9654;&#9654; NEXT PHASE</button>
+        <button class="sbtn" id="mode-jam" style="border-color:#ff3b3b;color:#ff3b3b">&#x26A1; Place RF Jam</button>
+        <button class="sbtn" id="mode-gps" style="border-color:#4466ff;color:#8899ff">&#x25CE; Place GPS Denial</button>
+        <button class="sbtn" id="mode-atk" style="border-color:var(--warn);color:var(--warn)">&#x25CE; Place Attacker</button>
+        <button class="sbtn" id="btn-clear-zones" style="color:var(--muted)">&#x2715; Clear All Zones</button>
+        <div style="display:flex;gap:4px;margin-top:4px;">
+          <select id="threat-type-select" class="hw-select" style="flex:1;font-size:10px;">
+            <option value="STATIC_AA">Static AA</option>
+            <option value="MOBILE_PATROL">Mobile Patrol</option>
+            <option value="COUNTER_UAS_RF">Counter-UAS RF</option>
+            <option value="DIRECTED_ENERGY">Directed Energy</option>
+            <option value="NET_GUN">Net Gun</option>
+          </select>
+          <button class="sbtn" id="btn-place-threat" style="border-color:var(--alert);color:var(--alert);white-space:nowrap;">PLACE THREAT</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="psec">
+      <div class="ptitle">Inject Events</div>
+      <div class="sgrid">
+        <button class="sbtn danger" id="btn-kill-gl">Kill GL</button>
+        <button class="sbtn danger" id="btn-kill-sl">Kill SL</button>
+        <button class="sbtn danger" id="btn-kill-squad">Wipe Squad</button>
+        <button class="sbtn warn-btn" id="btn-rf-storm">RF Storm</button>
+        <button class="sbtn warn-btn" id="btn-gps-out">GPS Out</button>
+        <button class="sbtn warn-btn" id="btn-attacker">Attacker</button>
+        <button class="sbtn" id="btn-recharge" style="color:var(--ok);border-color:var(--ok)">Recharge</button>
+        <button class="sbtn" id="btn-heal" style="color:var(--ok);border-color:var(--ok)">Heal All</button>
+      </div>
+    </div>
+
+    <div id="legend">
+      <div class="li"><div class="ld" style="background:var(--gl)"></div>GL</div>
+      <div class="li"><div class="ld" style="background:var(--sl)"></div>SL</div>
+      <div class="li"><div class="ld" style="background:var(--asl)"></div>ASL (AI)</div>
+      <div class="li"><div class="ld" style="background:var(--w)"></div>Worker</div>
+      <div class="li"><div class="ld" style="background:var(--sh)"></div>Shadow</div>
+      <div class="li"><div class="ld" style="background:var(--rl)"></div>Relay</div>
+    </div>
+  </div>
+
+  <!-- CANVAS -->
+  <div id="canvas-wrap">
+    <canvas id="sim-canvas"></canvas>
+    <div id="canvas-overlay">AMMO SIM v0.4</div>
+    <div id="phase-bar" style="position:absolute;top:8px;left:50%;transform:translateX(-50%);display:flex;gap:2px;z-index:5;pointer-events:none;">
+      <div class="phase-pip" data-phase="STAGING" style="padding:2px 8px;font-family:'Share Tech Mono',monospace;font-size:9px;background:rgba(13,20,32,0.85);border:1px solid #1a2d45;color:#4a6680;">STAGING</div>
+      <div class="phase-pip" data-phase="INGRESS" style="padding:2px 8px;font-family:'Share Tech Mono',monospace;font-size:9px;background:rgba(13,20,32,0.85);border:1px solid #1a2d45;color:#4a6680;">INGRESS</div>
+      <div class="phase-pip" data-phase="LOITER" style="padding:2px 8px;font-family:'Share Tech Mono',monospace;font-size:9px;background:rgba(13,20,32,0.85);border:1px solid #1a2d45;color:#4a6680;">LOITER</div>
+      <div class="phase-pip" data-phase="EXECUTE" style="padding:2px 8px;font-family:'Share Tech Mono',monospace;font-size:9px;background:rgba(13,20,32,0.85);border:1px solid #1a2d45;color:#4a6680;">EXECUTE</div>
+      <div class="phase-pip" data-phase="EGRESS" style="padding:2px 8px;font-family:'Share Tech Mono',monospace;font-size:9px;background:rgba(13,20,32,0.85);border:1px solid #1a2d45;color:#4a6680;">EGRESS</div>
+      <div class="phase-pip" data-phase="RTB" style="padding:2px 8px;font-family:'Share Tech Mono',monospace;font-size:9px;background:rgba(13,20,32,0.85);border:1px solid #1a2d45;color:#4a6680;">RTB</div>
+    </div>
+    <div id="mode-indicator"></div>
+    <div id="route-info">ROUTE ACTIVE — click to add waypoints</div>
+    <div id="replay-bar" style="display:none;position:absolute;bottom:36px;left:8px;right:8px;background:rgba(13,20,32,0.9);border:1px solid #1a2d45;padding:5px 8px;align-items:center;gap:8px;font-family:'Share Tech Mono',monospace;font-size:10px;z-index:5;">
+      <span style="color:#ffdc00;">REPLAY</span>
+      <button id="replay-step-back" style="font-size:10px;padding:2px 6px;">&#9664;</button>
+      <input id="replay-slider" type="range" min="0" max="0" value="0" style="flex:1;height:4px;">
+      <button id="replay-step-fwd" style="font-size:10px;padding:2px 6px;">&#9654;</button>
+      <span id="replay-time" style="color:var(--muted);min-width:50px;">T+00:00</span>
+      <button id="replay-exit" style="font-size:10px;padding:2px 6px;border-color:var(--alert);color:var(--alert);">EXIT</button>
+    </div>
+    <div id="zoom-controls">
+      <button id="btn-zoom-in">+</button>
+      <button id="btn-zoom-out">-</button>
+      <button id="btn-zoom-fit" style="font-size:10px;letter-spacing:0">FIT</button>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div id="right-panel">
+    <div id="tabs">
+      <div class="tab active" data-tab="events">EVENTS</div>
+      <div class="tab" data-tab="decisions">AI LOG</div>
+      <div class="tab" data-tab="drone">DRONE</div>
+      <div class="tab" data-tab="metrics">METRICS</div>
+      <div class="tab" data-tab="assert">ASSERT</div>
+    </div>
+    <div id="tab-content">
+      <div id="event-log" class="active"></div>
+      <div id="decision-log"></div>
+      <div id="drone-info">
+        <div style="padding:18px;color:var(--muted);font-family:'Share Tech Mono',monospace;font-size:11px">Click a drone to inspect</div>
+      </div>
+      <div id="metrics-content"></div>
+      <div id="assert-content"></div>
+    </div>
+  </div>
+</div>
+
+<!-- DRONE SPEC MODAL -->
+<div id="spec-modal">
+  <div id="spec-box">
+    <div id="spec-header">
+      <h2>DRONE HARDWARE CATALOG</h2>
+      <button id="spec-close">&#x2715; CLOSE</button>
+    </div>
+    <div id="spec-grid"></div>
+  </div>
+</div>
+
+<!-- BATCH SIMULATION MODAL -->
+<div id="batch-modal">
+  <div id="batch-box" style="background:#0a1520;border:1px solid #2a4a6a;width:520px;max-width:96vw;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid #1a2d45;background:#0d1420;">
+      <h2 style="font-family:'Share Tech Mono',monospace;font-size:16px;color:#00d4ff;letter-spacing:3px;">BATCH SIMULATION</h2>
+      <button id="batch-close" style="background:none;border:1px solid #4a6680;color:#4a6680;font-size:14px;padding:3px 9px;cursor:pointer;">&#x2715;</button>
+    </div>
+    <div style="padding:16px;overflow-y:auto;font-family:'Rajdhani',sans-serif;font-size:13px;color:#c8dff0;">
+      <div style="display:flex;gap:16px;margin-bottom:12px;">
+        <div><label style="font-size:10px;color:#4a6680;letter-spacing:1px;">SCENARIOS</label><br><input id="batch-count" type="number" value="100" min="1" max="1000" style="width:80px;background:#0d1420;border:1px solid #1a2d45;color:#c8dff0;font-family:'Share Tech Mono',monospace;padding:4px;"></div>
+        <div><label style="font-size:10px;color:#4a6680;letter-spacing:1px;">DURATION (min)</label><br><input id="batch-duration" type="number" value="10" min="1" max="60" style="width:80px;background:#0d1420;border:1px solid #1a2d45;color:#c8dff0;font-family:'Share Tech Mono',monospace;padding:4px;"></div>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:10px;color:#4a6680;letter-spacing:1px;">SWEEP PARAMETER</label><br>
+        <label style="margin-right:10px;"><input type="radio" name="sweep" value="none" checked style="accent-color:#00d4ff;"> None</label>
+        <label style="margin-right:10px;"><input type="radio" name="sweep" value="workers" style="accent-color:#00d4ff;"> Workers/Squad</label>
+        <label style="margin-right:10px;"><input type="radio" name="sweep" value="noise" style="accent-color:#00d4ff;"> RF Noise</label>
+        <label style="margin-right:10px;"><input type="radio" name="sweep" value="battDrain" style="accent-color:#00d4ff;"> Batt Drain</label>
+        <label style="margin-right:10px;"><input type="radio" name="sweep" value="squads" style="accent-color:#00d4ff;"> Squads</label>
+        <label><input type="radio" name="sweep" value="rfRange" style="accent-color:#00d4ff;"> RF Range</label>
+      </div>
+      <div style="display:flex;gap:12px;margin-bottom:16px;">
+        <div><label style="font-size:10px;color:#4a6680;">RANGE START</label><br><input id="sweep-start" type="number" value="2" style="width:60px;background:#0d1420;border:1px solid #1a2d45;color:#c8dff0;font-family:'Share Tech Mono',monospace;padding:4px;"></div>
+        <div><label style="font-size:10px;color:#4a6680;">RANGE END</label><br><input id="sweep-end" type="number" value="8" style="width:60px;background:#0d1420;border:1px solid #1a2d45;color:#c8dff0;font-family:'Share Tech Mono',monospace;padding:4px;"></div>
+        <div><label style="font-size:10px;color:#4a6680;">STEPS</label><br><input id="sweep-steps" type="number" value="4" style="width:60px;background:#0d1420;border:1px solid #1a2d45;color:#c8dff0;font-family:'Share Tech Mono',monospace;padding:4px;"></div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;">
+        <button id="btn-start-batch" style="padding:6px 16px;background:#00d4ff;color:#000;border:none;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:13px;letter-spacing:1px;cursor:pointer;">RUN BATCH</button>
+        <span style="font-family:'Share Tech Mono',monospace;font-size:12px;color:#4a6680;">Progress: <span id="batch-progress">0/0</span></span>
+      </div>
+      <div id="batch-results" style="border-top:1px solid #1a2d45;padding-top:8px;min-height:100px;color:#4a6680;font-size:11px;">Results will appear here</div>
+    </div>
+  </div>
+</div>
+
+<!-- FAULT INJECTION MODAL -->
+<div id="fault-modal">
+  <div style="background:#0a1520;border:1px solid #2a4a6a;width:480px;max-width:96vw;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid #1a2d45;background:#0d1420;">
+      <h2 style="font-family:'Share Tech Mono',monospace;font-size:16px;color:var(--alert);letter-spacing:3px;">FAULT INJECTION</h2>
+      <button id="fault-close" style="background:none;border:1px solid #4a6680;color:#4a6680;font-size:14px;padding:3px 9px;cursor:pointer;">&#x2715;</button>
+    </div>
+    <div style="padding:16px;overflow-y:auto;font-size:13px;color:#c8dff0;">
+      <div style="margin-bottom:8px;font-size:10px;color:#4a6680;">SCHEDULE (JSON array — edit or load example)</div>
+      <textarea id="fault-schedule-input" rows="10" style="width:100%;background:#0d1420;border:1px solid #1a2d45;color:#c8dff0;font-family:'Share Tech Mono',monospace;font-size:11px;padding:8px;resize:vertical;"></textarea>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button id="btn-fault-load" style="flex:1;padding:5px;background:#0d1420;border:1px solid var(--ok);color:var(--ok);cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:600;">LOAD SCHEDULE</button>
+        <button id="btn-fault-example" style="flex:1;padding:5px;background:#0d1420;border:1px solid var(--gl);color:var(--gl);cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:600;">LOAD EXAMPLE</button>
+        <button id="btn-fault-clear" style="flex:1;padding:5px;background:#0d1420;border:1px solid var(--muted);color:var(--muted);cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:600;">CLEAR</button>
+      </div>
+      <div id="fault-status" style="margin-top:8px;font-size:10px;color:var(--muted);"></div>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

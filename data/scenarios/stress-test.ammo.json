@@ -1,0 +1,25 @@
+{
+  "name": "Stress Test",
+  "description": "Maximum fleet size stress test \u2014 4 squads with attacker presence",
+  "version": "0.4",
+  "cfg": {
+    "squads": 4,
+    "workers": 8,
+    "relays": 6,
+    "aiGL": true,
+    "aiSL": false,
+    "shadowOn": true,
+    "rfRange": 130,
+    "noise": 25,
+    "battDrain": 8,
+    "hwGL": "COMMAND_NODE",
+    "hwSL": "JETSON_NX",
+    "hwWorker": "STM32_BASIC",
+    "hwRelay": "ESP32_MESH"
+  },
+  "zones": [
+    { "type": "attacker", "x": 650, "y": 300, "radius": 85, "ang": 2.1 }
+  ],
+  "route": [],
+  "savedAt": "2026-03-23T00:00:00.000Z"
+}

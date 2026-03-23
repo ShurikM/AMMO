@@ -1,0 +1,26 @@
+{
+  "name": "Contested Corridor",
+  "description": "Contested RF corridor \u2014 navigate through jamming zones with degraded comms",
+  "version": "0.4",
+  "cfg": {
+    "squads": 3,
+    "workers": 4,
+    "relays": 4,
+    "aiGL": true,
+    "aiSL": true,
+    "shadowOn": true,
+    "rfRange": 130,
+    "noise": 40,
+    "battDrain": 8,
+    "hwGL": "JETSON_AGX",
+    "hwSL": "JETSON_NX",
+    "hwWorker": "STM32_ADV",
+    "hwRelay": "ESP32_MESH"
+  },
+  "zones": [
+    { "type": "jam", "x": 300, "y": 280, "radius": 90 },
+    { "type": "jam", "x": 520, "y": 340, "radius": 80 }
+  ],
+  "route": [],
+  "savedAt": "2026-03-23T00:00:00.000Z"
+}

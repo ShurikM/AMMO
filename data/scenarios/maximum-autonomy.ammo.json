@@ -1,0 +1,23 @@
+{
+  "name": "Maximum Autonomy",
+  "description": "Maximum AI autonomy \u2014 all leaders AI-enabled with high battery consumption",
+  "version": "0.4",
+  "cfg": {
+    "squads": 2,
+    "workers": 6,
+    "relays": 2,
+    "aiGL": true,
+    "aiSL": true,
+    "shadowOn": true,
+    "rfRange": 180,
+    "noise": 20,
+    "battDrain": 12,
+    "hwGL": "JETSON_AGX",
+    "hwSL": "JETSON_AGX",
+    "hwWorker": "JETSON_NANO",
+    "hwRelay": "ESP32_MESH"
+  },
+  "zones": [],
+  "route": [],
+  "savedAt": "2026-03-23T00:00:00.000Z"
+}

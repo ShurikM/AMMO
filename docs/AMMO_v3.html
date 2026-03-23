@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AMMO — Aerial Mesh Mission Orchestration · Simulator</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap');
+:root {
+  --bg:#080c12; --panel:#0d1420; --border:#1a2d45; --dim:#0f1a28;
+  --gl:#00d4ff; --sl:#00ffcc; --asl:#bf7fff; --w:#39ff88;
+  --sh:#ff9e00; --rl:#ffe033; --alert:#ff3b3b; --warn:#ff9000;
+  --ok:#00e87a; --text:#c8dff0; --muted:#4a6680;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif;font-size:14px;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+
+/* TOP BAR */
+#topbar{display:flex;align-items:center;gap:16px;padding:7px 14px;background:var(--panel);border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;}
+#logo{font-family:'Share Tech Mono',monospace;font-size:20px;color:var(--gl);letter-spacing:4px;text-shadow:0 0 12px var(--gl);}
+#logo span{color:var(--muted);font-size:10px;letter-spacing:2px;display:block;margin-top:-3px;}
+.tb-div{width:1px;height:30px;background:var(--border);}
+#mission-clock{font-family:'Share Tech Mono',monospace;font-size:17px;color:var(--ok);min-width:75px;}
+.stat-block{display:flex;flex-direction:column;align-items:center;}
+.stat-block .lbl{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
+.stat-block .val{font-family:'Share Tech Mono',monospace;font-size:15px;}
+.val.ok{color:var(--ok);}.val.warn{color:var(--warn);}.val.alert{color:var(--alert);}
+#controls-bar{display:flex;gap:7px;align-items:center;margin-left:auto;}
+button{background:var(--dim);border:1px solid var(--border);color:var(--text);font-family:'Rajdhani',sans-serif;font-weight:600;font-size:12px;padding:4px 10px;cursor:pointer;letter-spacing:1px;transition:all .15s;}
+button:hover{background:var(--border);color:#fff;}
+button.active{background:var(--gl);color:#000;border-color:var(--gl);}
+button.danger{border-color:var(--alert);color:var(--alert);}
+button.danger:hover{background:var(--alert);color:#000;}
+button.warn-btn{border-color:var(--warn);color:var(--warn);}
+button.warn-btn:hover{background:var(--warn);color:#000;}
+.spd{font-size:11px;padding:3px 7px;min-width:32px;}
+
+/* MAIN */
+#main{display:flex;flex:1;overflow:hidden;}
+
+/* LEFT PANEL */
+#left-panel{width:222px;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0;}
+.psec{padding:9px 11px;border-bottom:1px solid var(--border);}
+.ptitle{font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:7px;}
+.crow{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.crow label{font-size:12px;color:var(--text);}
+.badge{font-family:'Share Tech Mono',monospace;font-size:11px;padding:2px 4px;border:1px solid;min-width:26px;text-align:center;}
+input[type=range]{-webkit-appearance:none;height:4px;background:var(--border);outline:none;width:76px;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;border-radius:50%;background:var(--gl);cursor:pointer;}
+input[type=checkbox]{accent-color:var(--gl);width:13px;height:13px;cursor:pointer;}
+.trow{display:flex;align-items:center;gap:7px;margin-bottom:5px;font-size:12px;}
+.dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:4px;}
+.sbtn{font-size:11px;padding:5px 3px;letter-spacing:0;text-align:center;}
+
+/* TOOLTIP */
+.info-icon{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;border:1px solid var(--muted);color:var(--muted);font-size:9px;cursor:help;margin-left:4px;flex-shrink:0;}
+.info-icon:hover{border-color:var(--gl);color:var(--gl);}
+#global-tip{display:none;position:fixed;background:#0a1828;border:1px solid #2a4a6a;color:var(--text);font-size:12px;font-family:'Rajdhani',sans-serif;font-weight:400;padding:9px 12px;width:210px;z-index:9999;line-height:1.6;pointer-events:none;box-shadow:0 4px 20px rgba(0,0,0,0.6);}
+#global-tip b{color:var(--gl);}
+#global-tip .rn{color:var(--sl);font-weight:700;display:block;margin-bottom:3px;}
+
+/* CANVAS */
+#canvas-wrap{flex:1;position:relative;overflow:hidden;background:var(--bg);}
+#sim-canvas{cursor:crosshair;display:block;position:absolute;top:0;left:0;}
+#canvas-overlay{position:absolute;top:8px;left:8px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--muted);pointer-events:none;}
+#mode-indicator{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--warn);pointer-events:none;opacity:0;transition:opacity .3s;background:rgba(8,12,18,0.85);padding:4px 10px;border:1px solid var(--warn);}
+
+/* ZOOM CONTROLS on canvas */
+#zoom-controls{position:absolute;bottom:8px;right:8px;display:flex;gap:4px;}
+#zoom-controls button{padding:4px 9px;font-size:14px;}
+
+/* ROUTE info */
+#route-info{position:absolute;top:8px;right:8px;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--ok);pointer-events:none;display:none;}
+
+/* RIGHT PANEL */
+#right-panel{width:290px;background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;}
+#tabs{display:flex;border-bottom:1px solid var(--border);}
+.tab{flex:1;padding:7px 0;text-align:center;font-size:10px;letter-spacing:1px;color:var(--muted);cursor:pointer;text-transform:uppercase;transition:all .15s;}
+.tab.active{color:var(--gl);border-bottom:2px solid var(--gl);}
+.tab:hover:not(.active){color:var(--text);}
+#tab-content{flex:1;overflow-y:auto;}
+#event-log,#decision-log,#drone-info{display:none;}
+#event-log.active,#decision-log.active,#drone-info.active{display:block;}
+.lentry{padding:5px 9px;border-bottom:1px solid #0d1520;font-family:'Share Tech Mono',monospace;font-size:10px;line-height:1.5;}
+.lentry .ts{color:var(--muted);margin-right:5px;}
+.lentry.ok .ts{color:var(--ok);}.lentry.warn .ts{color:var(--warn);}.lentry.alert .ts{color:var(--alert);}
+.lentry.ai{background:rgba(191,127,255,.06);border-left:2px solid var(--asl);}
+.dstat{padding:7px 11px;border-bottom:1px solid var(--border);}
+.dstat .dsl{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
+.dstat .dsv{font-family:'Share Tech Mono',monospace;font-size:14px;}
+.dsr{display:flex;justify-content:space-between;}
+.hbar{height:5px;background:var(--border);border-radius:2px;margin-top:3px;overflow:hidden;}
+.hfill{height:100%;border-radius:2px;transition:width .3s;}
+
+/* LEGEND */
+#legend{padding:7px 11px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:auto;}
+.li{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);}
+.ld{width:8px;height:8px;border-radius:50%;}
+
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+
+/* DRONE SPEC MODAL */
+#spec-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:10000;align-items:center;justify-content:center;}
+#spec-modal.open{display:flex;}
+#spec-box{background:#0a1520;border:1px solid #2a4a6a;width:860px;max-width:96vw;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;}
+#spec-header{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--border);background:var(--panel);}
+#spec-header h2{font-family:'Share Tech Mono',monospace;font-size:16px;color:var(--gl);letter-spacing:3px;}
+#spec-close{background:none;border:1px solid var(--muted);color:var(--muted);font-size:14px;padding:3px 9px;cursor:pointer;}
+#spec-close:hover{border-color:var(--alert);color:var(--alert);}
+#spec-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;padding:16px;overflow-y:auto;}
+.spec-card{background:var(--panel);border:1px solid var(--border);padding:12px;cursor:pointer;transition:border-color .15s;}
+.spec-card:hover{border-color:var(--gl);}
+.spec-card.selected{border-color:var(--ok);background:rgba(0,232,122,0.05);}
+.sc-name{font-family:'Share Tech Mono',monospace;font-size:13px;font-weight:700;margin-bottom:2px;}
+.sc-class{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+.sc-row{display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;border-bottom:1px solid rgba(26,45,69,0.5);padding-bottom:3px;}
+.sc-row .sk{color:var(--muted);}
+.sc-row .sv{font-family:'Share Tech Mono',monospace;}
+.cap-bar{height:4px;background:var(--border);border-radius:2px;margin-top:6px;margin-bottom:2px;overflow:hidden;}
+.cap-fill{height:100%;border-radius:2px;}
+.cap-label{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
+.cap-row{margin-bottom:5px;}
+/* hw type selector in left panel */
+.hw-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;}
+.hw-row label{font-size:11px;color:var(--muted);}
+.hw-select{background:var(--dim);border:1px solid var(--border);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:10px;padding:2px 4px;cursor:pointer;flex:1;margin-left:6px;}
+.hw-select:focus{outline:none;border-color:var(--gl);}
+
+</style>
+</head>
+<body>
+
+<div id="global-tip"></div>
+<div id="topbar">
+  <div id="logo">AMMO<span>AERIAL MESH MISSION ORCHESTRATION</span></div>
+  <div class="tb-div"></div>
+  <div id="mission-clock">T+00:00</div>
+  <div class="tb-div"></div>
+  <div class="stat-block"><span class="lbl">Drones</span><span class="val ok" id="stat-alive">0</span></div>
+  <div class="stat-block"><span class="lbl">Leaders</span><span class="val ok" id="stat-leaders">0</span></div>
+  <div class="stat-block"><span class="lbl">Lost</span><span class="val" id="stat-dead">0</span></div>
+  <div class="stat-block"><span class="lbl">Elections</span><span class="val" id="stat-elections">0</span></div>
+  <div class="stat-block"><span class="lbl">Mesh Links</span><span class="val ok" id="stat-links">0</span></div>
+  <div class="stat-block"><span class="lbl">Avg Battery</span><span class="val ok" id="stat-batt">100%</span></div>
+  <div id="controls-bar">
+    <button onclick="togglePause()" id="btn-pause">&#9646;&#9646; PAUSE</button>
+    <span style="color:var(--muted);font-size:10px">SPD</span>
+    <button class="spd" onclick="setSpeed(0.5)" id="sp-05">1/2x</button>
+    <button class="spd active" onclick="setSpeed(1)" id="sp-1">1x</button>
+    <button class="spd" onclick="setSpeed(2)" id="sp-2">2x</button>
+    <button class="spd" onclick="setSpeed(5)" id="sp-5">5x</button>
+    <button onclick="resetSim()">&#8635; RESET</button>
+  </div>
+</div>
+
+<div id="main">
+  <!-- LEFT PANEL -->
+  <div id="left-panel">
+
+    <div class="psec">
+      <div class="ptitle">Fleet Configuration</div>
+      <div class="crow">
+        <label>Squads</label>
+        <input type="range" min="1" max="4" value="2" id="cfg-squads" oninput="updateFleetConfig()">
+        <span class="badge" style="color:var(--gl);border-color:var(--gl)" id="val-squads">2</span>
+      </div>
+      <div class="crow">
+        <label>Workers/Squad</label>
+        <input type="range" min="2" max="8" value="4" id="cfg-workers" oninput="updateFleetConfig()">
+        <span class="badge" style="color:var(--w);border-color:var(--w)" id="val-workers">4</span>
+      </div>
+      <div class="crow">
+        <label>Relay Nodes</label>
+        <input type="range" min="0" max="6" value="2" id="cfg-relays" oninput="updateFleetConfig()">
+        <span class="badge" style="color:var(--rl);border-color:var(--rl)" id="val-relays">2</span>
+      </div>
+    </div>
+
+    <div class="psec">
+      <div class="ptitle">AI Capabilities</div>
+      <div class="trow">
+        <input type="checkbox" id="ai-gl" checked onchange="updateFleetConfig()">
+        <div class="dot" style="background:var(--gl)"></div>
+        <label for="ai-gl">AI Group Leader</label>
+        <span class="info-icon" data-tip="<b class=&quot;role-name&quot;>GL — Group Leader</b><br>Top of hierarchy. Commands all squads. When AI-enabled runs an onboard reasoning model to adapt mission goals in real time — no human in loop. Diamond shape on map.">i</span>
+      </div>
+      <div class="trow">
+        <input type="checkbox" id="ai-sl" onchange="updateFleetConfig()">
+        <div class="dot" style="background:var(--sl)"></div>
+        <label for="ai-sl">AI Squad Leaders</label>
+        <span class="info-icon" data-tip="<b class=&quot;role-name&quot;>SL — Squad Leader</b><br>Commands 3-8 workers within one squad. Routes intel upward to GL. When AI-enabled (ASL) can adapt squad tactics autonomously without waiting for GL. Circle on map.">i</span>
+      </div>
+      <div class="trow">
+        <input type="checkbox" id="shadow-on" checked onchange="updateFleetConfig()">
+        <div class="dot" style="background:var(--sh)"></div>
+        <label for="shadow-on">Shadow Nodes</label>
+        <span class="info-icon" data-tip="<b class=&quot;role-name&quot;>SH — Shadow Node</b><br>Hot-standby for its leader. Continuously receives full mission state via SYNC_STATE packets. If leader is destroyed, Shadow wins election with +40 score bonus and takes over with ZERO state loss. Hexagon shape on map.">i</span>
+      </div>
+      <div class="trow">
+        <div class="dot" style="background:var(--rl)"></div>
+        <label>Relay Nodes</label>
+        <span class="info-icon" data-tip="<b class=&quot;role-name&quot;>RL — Relay Node</b><br>Pure RF mesh extender. No mission payload, no AI. Forwards packets to bridge gaps in coverage. Critical in jammed or GPS-denied corridors. Square shape on map.">i</span>
+      </div>
+      <div class="trow">
+        <div class="dot" style="background:var(--w)"></div>
+        <label>Worker Drones</label>
+        <span class="info-icon" data-tip="<b class=&quot;role-name&quot;>W — Worker</b><br>Executes assigned tasks: surveillance, strike, sensor collection. Reports status upward to SL every beacon cycle. Lowest compute, deterministic firmware only. Circle (small) on map.">i</span>
+      </div>
+    </div>
+
+
+    <div class="psec">
+      <div class="ptitle" style="display:flex;align-items:center;justify-content:space-between;">
+        Hardware Config
+        <button onclick="openSpecModal()" style="font-size:9px;padding:2px 6px;letter-spacing:0;border-color:var(--gl);color:var(--gl)">VIEW ALL SPECS</button>
+      </div>
+      <div class="hw-row"><label>GL Type</label><select class="hw-select" id="hw-gl" onchange="updateFleetConfig()">
+        <option value="COMMAND_NODE">Command Node (x86)</option>
+        <option value="JETSON_AGX">Jetson AGX Orin</option>
+        <option value="JETSON_NX">Jetson Orin NX</option>
+      </select></div>
+      <div class="hw-row"><label>SL Type</label><select class="hw-select" id="hw-sl" onchange="updateFleetConfig()">
+        <option value="JETSON_NX">Jetson Orin NX</option>
+        <option value="JETSON_NANO">Jetson Nano</option>
+        <option value="RPI5">RPi5 + NPU</option>
+      </select></div>
+      <div class="hw-row"><label>Worker Type</label><select class="hw-select" id="hw-worker" onchange="updateFleetConfig()">
+        <option value="STM32_BASIC">STM32 Basic</option>
+        <option value="STM32_ADV">STM32 Advanced</option>
+        <option value="RPI_ZERO">RPi Zero 2W</option>
+        <option value="JETSON_NANO">Jetson Nano</option>
+      </select></div>
+      <div class="hw-row"><label>Relay Type</label><select class="hw-select" id="hw-relay" onchange="updateFleetConfig()">
+        <option value="ESP32_MESH">ESP32 Mesh</option>
+        <option value="STM32_BASIC">STM32 Basic</option>
+      </select></div>
+    </div>
+    <div class="psec">
+      <div class="ptitle">Environment</div>
+      <div class="crow">
+        <label>RF Range</label>
+        <input type="range" min="60" max="200" value="130" id="cfg-range" oninput="updateEnv()">
+        <span class="badge" style="color:var(--sl);border-color:var(--sl)" id="val-range">130</span>
+      </div>
+      <div class="crow">
+        <label>RF Noise %</label>
+        <input type="range" min="0" max="100" value="10" id="cfg-noise" oninput="updateEnv()">
+        <span class="badge" style="color:var(--warn);border-color:var(--warn)" id="val-noise">10</span>
+      </div>
+      <div class="crow">
+        <label>Batt Drain
+          <span class="info-icon" style="vertical-align:middle" data-tip="Battery drains in real simulation time. At drain=5 a drone lasts ~33 min of sim time at 1x speed. At drain=20 it lasts ~8 min. AI nodes drain 40% faster. Watch the colored arc around each drone — orange=low, red=critical.">i</span>
+        </label>
+        <input type="range" min="1" max="30" value="5" id="cfg-drain" oninput="updateEnv()">
+        <span class="badge" style="color:var(--warn);border-color:var(--warn)" id="val-drain">5</span>
+      </div>
+    </div>
+
+    <div class="psec">
+      <div class="ptitle">Place on Map (click canvas)</div>
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <button class="sbtn" id="mode-route" onclick="setPlaceMode('route')" style="border-color:var(--ok);color:var(--ok)">&#9654; Set Mission Route</button>
+        <button class="sbtn" onclick="clearRoute()" style="color:var(--muted)">&#8960; Clear Route</button>
+        <button class="sbtn" id="mode-jam" onclick="setPlaceMode('jam')" style="border-color:#ff3b3b;color:#ff3b3b">&#x26A1; Place RF Jam</button>
+        <button class="sbtn" id="mode-gps" onclick="setPlaceMode('gps')" style="border-color:#4466ff;color:#8899ff">&#x25CE; Place GPS Denial</button>
+        <button class="sbtn" id="mode-atk" onclick="setPlaceMode('attacker')" style="border-color:var(--warn);color:var(--warn)">&#x25CE; Place Attacker</button>
+        <button class="sbtn" onclick="clearZones()" style="color:var(--muted)">&#x2715; Clear All Zones</button>
+      </div>
+    </div>
+
+    <div class="psec">
+      <div class="ptitle">Inject Events</div>
+      <div class="sgrid">
+        <button class="sbtn danger" onclick="killGroupLeader()">Kill GL</button>
+        <button class="sbtn danger" onclick="killSquadLeader()">Kill SL</button>
+        <button class="sbtn danger" onclick="killSquad()">Wipe Squad</button>
+        <button class="sbtn warn-btn" onclick="rfStorm()">RF Storm</button>
+        <button class="sbtn warn-btn" onclick="gpsBlackout()">GPS Out</button>
+        <button class="sbtn warn-btn" onclick="attackerStrike()">Attacker</button>
+        <button class="sbtn" onclick="resetBattery()" style="color:var(--ok);border-color:var(--ok)">Recharge</button>
+        <button class="sbtn" onclick="healAll()" style="color:var(--ok);border-color:var(--ok)">Heal All</button>
+      </div>
+    </div>
+
+    <div id="legend">
+      <div class="li"><div class="ld" style="background:var(--gl)"></div>GL</div>
+      <div class="li"><div class="ld" style="background:var(--sl)"></div>SL</div>
+      <div class="li"><div class="ld" style="background:var(--asl)"></div>ASL (AI)</div>
+      <div class="li"><div class="ld" style="background:var(--w)"></div>Worker</div>
+      <div class="li"><div class="ld" style="background:var(--sh)"></div>Shadow</div>
+      <div class="li"><div class="ld" style="background:var(--rl)"></div>Relay</div>
+    </div>
+  </div>
+
+  <!-- CANVAS -->
+  <div id="canvas-wrap">
+    <canvas id="sim-canvas"></canvas>
+    <div id="canvas-overlay">AMMO SIM v0.2</div>
+    <div id="mode-indicator"></div>
+    <div id="route-info">ROUTE ACTIVE — click to add waypoints</div>
+    <div id="zoom-controls">
+      <button onclick="zoomIn()">+</button>
+      <button onclick="zoomOut()">-</button>
+      <button onclick="resetZoom()" style="font-size:10px;letter-spacing:0">FIT</button>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div id="right-panel">
+    <div id="tabs">
+      <div class="tab active" onclick="showTab('events')">EVENTS</div>
+      <div class="tab" onclick="showTab('decisions')">AI LOG</div>
+      <div class="tab" onclick="showTab('drone')">DRONE</div>
+    </div>
+    <div id="tab-content">
+      <div id="event-log" class="active"></div>
+      <div id="decision-log"></div>
+      <div id="drone-info">
+        <div style="padding:18px;color:var(--muted);font-family:'Share Tech Mono',monospace;font-size:11px">Click a drone to inspect</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  AMMO SIMULATOR v0.2
+// ============================================================
+const canvas = document.getElementById('sim-canvas');
+const ctx = canvas.getContext('2d');
+const wrap = document.getElementById('canvas-wrap');
+
+// ---- View (zoom/pan) ----------------------------------------------------------------------------
+let V = { zoom:1, px:0, py:0, dragging:false, dx:0, dy:0, dpx:0, dpy:0 };
+
+function toWorld(cx, cy) {
+  return { x:(cx - V.px)/V.zoom, y:(cy - V.py)/V.zoom };
+}
+function toScreen(wx, wy) {
+  return { x: wx*V.zoom + V.px, y: wy*V.zoom + V.py };
+}
+
+
+// ---- Drone Hardware Types --------------------------------------------------------------------
+const DRONE_TYPES = {
+  COMMAND_NODE:{name:'Command Node',cls:'Ground / Heavy UAS',cpu:'x86-64 Core i7',gpu:'RTX 3060 Mobile',ram:'32 GB',comms:'5G + WiFi 6E + SDR',carryKg:8.0,airtimeMin:45,maxAltM:4000,speedKmh:85,weightKg:4.2,rfRangeMult:2.2,aiLevel:4,battCapMult:1.0,drainMult:1.8,missionTypes:['ORCHESTRATE','STRIKE','ISR','RELAY','CLOUD_INFERENCE'],aiDesc:'Full LLM reasoning + cloud ML inference. Delegates autonomously. No human in loop.',color:'#00d4ff'},
+  JETSON_AGX:{name:'Jetson AGX Orin',cls:'Heavy Leader UAS',cpu:'A78AE 12-core',gpu:'Ampere 2048c + 64 Tensor',ram:'64 GB',comms:'WiFi 6 + LoRa + SDR mesh',carryKg:3.5,airtimeMin:35,maxAltM:3500,speedKmh:70,weightKg:2.8,rfRangeMult:1.7,aiLevel:3,battCapMult:0.9,drainMult:1.5,missionTypes:['ORCHESTRATE','STRIKE','ISR','LOCAL_INFERENCE'],aiDesc:'Full YOLO/transformer on-device. No cloud needed. Autonomous mission adaptation.',color:'#00d4ff'},
+  JETSON_NX:{name:'Jetson Orin NX',cls:'Mid Leader UAS',cpu:'A78AE 8-core',gpu:'Ampere 1024c + 32 Tensor',ram:'16 GB',comms:'WiFi 6 + LoRa + mesh',carryKg:2.0,airtimeMin:28,maxAltM:2800,speedKmh:65,weightKg:1.9,rfRangeMult:1.4,aiLevel:3,battCapMult:0.85,drainMult:1.3,missionTypes:['ORCHESTRATE','ISR','LOCAL_INFERENCE'],aiDesc:'Compressed transformer models. Full squad orchestration without GL. Prime election candidate.',color:'#bf7fff'},
+  JETSON_NANO:{name:'Jetson Nano 4GB',cls:'Light SBC UAS',cpu:'A57 4-core',gpu:'Maxwell 128-core',ram:'4 GB',comms:'WiFi 5 + LoRa',carryKg:0.8,airtimeMin:22,maxAltM:1800,speedKmh:55,weightKg:1.1,rfRangeMult:1.1,aiLevel:2,battCapMult:0.75,drainMult:1.1,missionTypes:['ISR','RELAY','EDGE_INFERENCE'],aiDesc:'Runs MobileNet/TFLite. Object detection, basic scene classification. Cannot lead a squad alone.',color:'#00ffcc'},
+  RPI5:{name:'RPi5 + Hailo NPU',cls:'Light SBC UAS',cpu:'A76 4-core 2.4GHz',gpu:'VideoCore VII + Hailo-8',ram:'8 GB',comms:'WiFi 5 + LoRa + mesh',carryKg:0.6,airtimeMin:25,maxAltM:1500,speedKmh:50,weightKg:0.9,rfRangeMult:1.0,aiLevel:2,battCapMult:0.8,drainMult:1.0,missionTypes:['ISR','RELAY','EDGE_INFERENCE'],aiDesc:'Hailo NPU: 26 TOPS edge inference. Supports basic orchestration duties under direction.',color:'#00ffcc'},
+  RPI_ZERO:{name:'RPi Zero 2W',cls:'Micro Worker UAS',cpu:'A53 4-core 1GHz',gpu:'VideoCore IV',ram:'512 MB',comms:'WiFi 4 + RF',carryKg:0.2,airtimeMin:18,maxAltM:800,speedKmh:40,weightKg:0.35,rfRangeMult:0.85,aiLevel:1,battCapMult:0.6,drainMult:0.7,missionTypes:['ISR','RELAY'],aiDesc:'Rule-engine only. IF/THEN chains. No ML. Must receive all task assignments from SL.',color:'#39ff88'},
+  STM32_ADV:{name:'STM32H7 Advanced',cls:'Constrained MCU UAS',cpu:'Cortex-M7 480MHz',gpu:'None (SIMD only)',ram:'1 MB SRAM',comms:'LoRa + 900MHz FHSS',carryKg:0.15,airtimeMin:40,maxAltM:600,speedKmh:65,weightKg:0.28,rfRangeMult:0.9,aiLevel:1,battCapMult:1.2,drainMult:0.5,missionTypes:['STRIKE','RELAY','SENSOR'],aiDesc:'Deterministic firmware + basic rule engine. Sub-ms reflexes. Long battery. No autonomous reasoning.',color:'#39ff88'},
+  STM32_BASIC:{name:'STM32F4 Basic',cls:'Minimal MCU UAS',cpu:'Cortex-M4 168MHz',gpu:'None',ram:'192 KB SRAM',comms:'LoRa / 433MHz',carryKg:0.05,airtimeMin:55,maxAltM:400,speedKmh:70,weightKg:0.18,rfRangeMult:0.75,aiLevel:0,battCapMult:1.5,drainMult:0.3,missionTypes:['RELAY','SENSOR'],aiDesc:'Pure deterministic code. No decisions beyond pre-programmed sequences. Follows TASK_ASSIGN only.',color:'#ffe033'},
+  ESP32_MESH:{name:'ESP32 Mesh Node',cls:'Ultra-light Relay',cpu:'Xtensa LX6 240MHz',gpu:'None',ram:'520 KB',comms:'WiFi-mesh + BLE + 915MHz',carryKg:0.0,airtimeMin:90,maxAltM:300,speedKmh:50,weightKg:0.12,rfRangeMult:0.8,aiLevel:0,battCapMult:2.0,drainMult:0.2,missionTypes:['RELAY'],aiDesc:'Pure mesh relay. Zero mission payload. Extremely low power. Long endurance. RF bridge only.',color:'#ffe033'}
+};
+
+const AI_LEVEL_DESC = [
+  {label:'NONE',    color:'#4a6680',desc:'Deterministic firmware only'},
+  {label:'RULES',   color:'#ffe033',desc:'IF/THEN rule engine, pre-programmed'},
+  {label:'EDGE-ML', color:'#ff9e00',desc:'TFLite/MobileNet on NPU, object detect'},
+  {label:'FULL-AI', color:'#bf7fff',desc:'Local transformer, autonomous adapt'},
+  {label:'CLOUD-AI',color:'#00d4ff',desc:'Remote ML via 5G/Ethernet, unlimited compute'}
+];
+
+const MISSION_COLORS = {
+  ORCHESTRATE:'#00d4ff',STRIKE:'#ff3b3b',ISR:'#00ffcc',
+  RELAY:'#ffe033',LOCAL_INFERENCE:'#bf7fff',
+  EDGE_INFERENCE:'#ff9e00',CLOUD_INFERENCE:'#00d4ff',SENSOR:'#39ff88'
+};
+
+// ---- Simulation state --------------------------------------------------------------------------
+const ROLES = { GL:'GL', SL:'SL', ASL:'ASL', W:'W', SH:'SH', RL:'RL' };
+const RCOL = { GL:'#00d4ff', SL:'#00ffcc', ASL:'#bf7fff', W:'#39ff88', SH:'#ff9e00', RL:'#ffe033' };
+const RRAD = { GL:14, SL:11, ASL:11, W:8, SH:9, RL:7 };
+const RRANGE = { GL:1.6, SL:1.3, ASL:1.3, W:1.0, SH:1.0, RL:1.5 };
+
+let nextId = 1;
+let S = {
+  drones:[], zones:[], packets:[], elections:[], links:[],
+  route:[], routeMode:false,
+  tick:0, missionTime:0, paused:false, speed:1,
+  placeMode:null, selectedId:null,
+  electionCount:0, lostCount:0, lastFrame:null,
+  cfg:{ squads:2, workers:4, relays:2, aiGL:true, aiSL:false, shadowOn:true, rfRange:130, noise:10, battDrain:5, hwGL:'COMMAND_NODE', hwSL:'JETSON_NX', hwWorker:'STM32_ADV', hwRelay:'ESP32_MESH' }
+};
+
+// ---- Init --------------------------------------------------------------------------------------------------
+function initSim() {
+  S.drones=[]; S.zones=[]; S.packets=[]; S.elections=[];
+  S.tick=0; S.missionTime=0; S.electionCount=0; S.lostCount=0;
+  nextId=1; S.selectedId=null; S.route=[];
+  const cw=canvas.width, ch=canvas.height, cx=cw/2, cy=ch/2;
+  const c=S.cfg;
+
+  // GL at center
+  const gl = mkDrone(cx, cy, ROLES.GL, null, 0);
+  gl.aiEnabled = c.aiGL;
+  if (c.aiGL) gl.color = RCOL.ASL;
+  S.drones.push(gl);
+
+  const angles = [[-Math.PI/3, Math.PI/3], [0], [-Math.PI*2/3,0,Math.PI*2/3],
+    [-Math.PI*3/4,-Math.PI/4,Math.PI/4,Math.PI*3/4]][c.squads-1];
+
+  angles.forEach((ang, si) => {
+    const sr=170, sx=cx+Math.cos(ang)*sr, sy=cy+Math.sin(ang)*(sr*0.8);
+    const slRole = c.aiSL ? ROLES.ASL : ROLES.SL;
+    const sl = mkDrone(sx, sy, slRole, gl.id, si+1);
+    sl.aiEnabled = c.aiSL;
+    S.drones.push(sl);
+
+    if (c.shadowOn) {
+      const sa=ang+0.35;
+      const sh = mkDrone(sx+Math.cos(sa)*48, sy+Math.sin(sa)*48, ROLES.SH, sl.id, si+1);
+      sh.shadowOf=sl.id; sh.leaderId=sl.id;
+      S.drones.push(sh);
+    }
+
+    for (let wi=0; wi<c.workers; wi++) {
+      const wa=ang+(wi-(c.workers-1)/2)*0.44;
+      const wr=80+(wi%2)*18;
+      const w=mkDrone(sx+Math.cos(wa)*wr, sy+Math.sin(wa)*(wr*0.88), ROLES.W, sl.id, si+1);
+      w.leaderId=sl.id;
+      S.drones.push(w);
+    }
+  });
+
+  for (let ri=0; ri<c.relays; ri++) {
+    const ra=(ri/c.relays)*Math.PI*2;
+    S.drones.push(mkDrone(cx+Math.cos(ra)*230, cy+Math.sin(ra)*170, ROLES.RL, null, 0));
+  }
+
+  addLog('AMMO SIM INITIALIZED -- '+S.drones.length+' drones deployed', 'ok');
+  addLog('Fleet: 1 GL, '+c.squads+' SLs, '+c.squads*c.workers+' workers, '+c.relays+' relays', 'ok');
+  if (c.aiGL) addAILog('GL','INIT','Mission loaded. Composing squad assignments. Goal vector locked.');
+  updateDroneInfoPanel();
+}
+
+function mkDrone(x, y, role, leaderId, squadId, hwTypeKey) {
+  const hwKey = hwTypeKey || (
+    role===ROLES.GL?S.cfg.hwGL : role===ROLES.SL||role===ROLES.ASL?S.cfg.hwSL :
+    role===ROLES.RL?S.cfg.hwRelay : S.cfg.hwWorker
+  );
+  const hw = DRONE_TYPES[hwKey] || DRONE_TYPES.STM32_BASIC;
+  const battCap = 85 * hw.battCapMult + Math.random()*8;
+  return {
+    id:nextId++, role, hwType:hwKey, hw,
+    x, y, px:x, py:y,
+    health:100, battery:Math.min(100, battCap),
+    aiEnabled: hw.aiLevel >= 3,
+    alive:true, squadId,
+    leaderId, shadowOf:null,
+    color: RCOL[role]||hw.color||'#888',
+    taskProgress:Math.random()*60,
+    electing:false, electPulse:0, electFlash:0,
+    patrolTimer:Math.random()*200,
+    patrolRadius:role===ROLES.GL?18:role===ROLES.SL||role===ROLES.ASL?32:role===ROLES.W?48:12,
+    originX:x, originY:y,
+    routeTarget:null
+  };
+}
+
+// ---- Resize ------------------------------------------------------------------------------------------------
+function resizeCanvas() {
+  const r=wrap.getBoundingClientRect();
+  canvas.width=Math.floor(r.width);
+  canvas.height=Math.floor(r.height);
+  initSim();
+}
+
+// ---- Main loop ------------------------------------------------------------------------------------------
+function loop(ts) {
+  if (!S.lastFrame) S.lastFrame=ts;
+  const raw=Math.min((ts-S.lastFrame)/1000, 0.05);
+  S.lastFrame=ts;
+  if (!S.paused) update(raw*S.speed);
+  draw();
+  requestAnimationFrame(loop);
+}
+
+function update(dt) {
+  S.missionTime+=dt; S.tick++;
+  updateDrones(dt);
+  updateLinks();
+  updatePackets(dt);
+  updateElections(dt);
+  updateZones(dt);
+  if (S.tick%90===0) spawnIntel();
+  if (S.tick%130===0) spawnBeacons();
+  if (S.tick%240===0) checkBattAlerts();
+  updateStats();
+}
+
+// ---- Battery drain -- REAL simulation --------------------------------------------
+// battDrain is "percent per sim-minute", so drain per second = battDrain/60
+// At drain=5: 5%/min => 20 min to empty (clearly visible)
+// At drain=20: 20%/min => 5 min to empty
+function updateDrones(dt) {
+  const drainPerSec = S.cfg.battDrain / 60.0;
+
+  S.drones.forEach(d => {
+    if (!d.alive) return;
+
+    // Patrol
+    d.patrolTimer -= dt*60;
+    if (d.patrolTimer<=0) {
+      d.patrolTimer=70+Math.random()*150;
+      // If route set, workers navigate toward route waypoints
+      if (S.route.length>0 && (d.role===ROLES.W||d.role===ROLES.SH)) {
+        const wi = d.routeTarget===null ? 0 : d.routeTarget;
+        const wp = S.route[wi % S.route.length];
+        const spread = 40;
+        d.px = wp.x + (Math.random()-0.5)*spread;
+        d.py = wp.y + (Math.random()-0.5)*spread;
+        const dd2 = dist2(d.x, d.y, wp.x, wp.y);
+        if (dd2 < 50 && S.route.length>1) d.routeTarget = (wi+1) % S.route.length;
+      } else {
+        const ang=Math.random()*Math.PI*2, r=Math.random()*d.patrolRadius;
+        d.px=Math.max(30,Math.min(canvas.width-30, d.originX+Math.cos(ang)*r));
+        d.py=Math.max(30,Math.min(canvas.height-30, d.originY+Math.sin(ang)*r));
+      }
+    }
+
+    // Move
+    const dx=d.px-d.x, dy=d.py-d.y;
+    const spd=(d.role===ROLES.GL?14:d.role===ROLES.W?24:19)*dt;
+    const dist=Math.sqrt(dx*dx+dy*dy);
+    if (dist>1){d.x+=(dx/dist)*Math.min(spd,dist); d.y+=(dy/dist)*Math.min(spd,dist);}
+    d.x+=(Math.random()-0.5)*0.6*dt*60;
+    d.y+=(Math.random()-0.5)*0.6*dt*60;
+
+    // REAL battery drain
+    const aiMult = d.aiEnabled ? 1.4 : 1.0;
+    const hwMult = (d.hw && d.hw.drainMult) ? d.hw.drainMult : 1.0;
+    d.battery = Math.max(0, d.battery - drainPerSec * aiMult * hwMult * dt);
+    if (d.battery <= 0) { killDrone(d.id, 'Battery depleted'); return; }
+
+    // Low battery degrades health slowly
+    if (d.battery < 15) d.health = Math.max(0, d.health - 0.5*dt);
+
+    // Animation
+    if (d.electing) d.electPulse+=dt*3;
+    if (d.electFlash>0) d.electFlash-=dt;
+
+    // Task progress
+    if (d.role===ROLES.W||d.role===ROLES.SH) {
+      d.taskProgress=Math.min(100,d.taskProgress+dt*(2+Math.random()*0.8));
+      if (d.taskProgress>=100) d.taskProgress=0;
+    }
+
+    // Zone effects
+    d.jammed=false; d.gpsLost=false;
+    S.zones.forEach(z => {
+      const dd=dist2(d.x,d.y,z.x,z.y);
+      if (z.type==='jam' && dd<z.radius) {
+        d.jammed=true;
+        d.battery=Math.max(0, d.battery-0.02*dt); // jam drains faster
+      }
+      if (z.type==='gps' && dd<z.radius) d.gpsLost=true;
+      if (z.type==='attacker' && dd<z.radius*0.28 && Math.random()<0.0012*S.speed)
+        killDrone(d.id,'Attacker strike');
+    });
+  });
+}
+
+function updateLinks() {
+  S.links=[];
+  const alive=S.drones.filter(d=>d.alive);
+  const noise=S.cfg.noise/100;
+  for (let i=0;i<alive.length;i++) for (let j=i+1;j<alive.length;j++) {
+    const a=alive[i], b=alive[j];
+    const maxR=S.cfg.rfRange*Math.min((a.hw?a.hw.rfRangeMult:1)*RRANGE[a.role],(b.hw?b.hw.rfRangeMult:1)*RRANGE[b.role]);
+    const d=dist2(a.x,a.y,b.x,b.y);
+    if (d>maxR) continue;
+    let q=1-(d/maxR)-noise*0.5;
+    S.zones.forEach(z=>{
+      if (z.type!=='jam') return;
+      const md=Math.min(dist2(a.x,a.y,z.x,z.y),dist2(b.x,b.y,z.x,z.y));
+      if (md<z.radius) q-=(1-md/z.radius)*0.85;
+    });
+    q=Math.max(0,Math.min(1,q+(Math.random()-0.5)*0.04));
+    if (q<0.04) continue;
+    const isLeader=(a.leaderId===b.id||b.leaderId===a.id||a.shadowOf===b.id||b.shadowOf===a.id);
+    S.links.push({a,b,q,isLeader});
+  }
+}
+
+function updatePackets(dt) {
+  S.packets=S.packets.filter(p=>{
+    p.prog+=dt*(p.spd||1.2);
+    const a=S.drones.find(d=>d.id===p.from), b=S.drones.find(d=>d.id===p.to);
+    if (!a||!b||!a.alive||!b.alive) return false;
+    p.x=a.x+(b.x-a.x)*p.prog; p.y=a.y+(b.y-a.y)*p.prog;
+    return p.prog<1;
+  });
+}
+
+function updateElections(dt) {
+  S.elections=S.elections.filter(e=>{
+    e.timer-=dt; e.phase+=dt;
+    if (e.timer<0&&!e.resolved){e.resolved=true;resolveElection(e);}
+    return e.phase<3.0;
+  });
+}
+
+function updateZones(dt) {
+  S.zones.forEach(z=>{
+    if (z.type!=='attacker') return;
+    z.ang=(z.ang||0)+dt*0.25;
+    z.x=Math.max(60,Math.min(canvas.width-60, z.x+Math.cos(z.ang)*18*dt));
+    z.y=Math.max(60,Math.min(canvas.height-60, z.y+Math.sin(z.ang)*18*dt));
+  });
+}
+
+function updateStats() {
+  const alive=S.drones.filter(d=>d.alive);
+  const leaders=alive.filter(d=>d.role===ROLES.GL||d.role===ROLES.SL||d.role===ROLES.ASL);
+  const avgBatt=alive.length?alive.reduce((s,d)=>s+d.battery,0)/alive.length:0;
+
+  document.getElementById('stat-alive').textContent=alive.length;
+  document.getElementById('stat-leaders').textContent=leaders.length;
+
+  const dd=document.getElementById('stat-dead');
+  dd.textContent=S.lostCount;
+  dd.className='val '+(S.lostCount>3?'alert':S.lostCount>0?'warn':'ok');
+
+  document.getElementById('stat-elections').textContent=S.electionCount;
+  document.getElementById('stat-links').textContent=S.links.length;
+
+  const battEl=document.getElementById('stat-batt');
+  battEl.textContent=Math.round(avgBatt)+'%';
+  battEl.className='val '+(avgBatt>50?'ok':avgBatt>25?'warn':'alert');
+
+  const mm=String(Math.floor(S.missionTime/60)).padStart(2,'0');
+  const ss=String(Math.floor(S.missionTime%60)).padStart(2,'0');
+  document.getElementById('mission-clock').textContent='T+'+mm+':'+ss;
+}
+
+// ---- Draw --------------------------------------------------------------------------------------------------
+function draw() {
+  const W=canvas.width, H=canvas.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.save();
+  ctx.translate(V.px,V.py);
+  ctx.scale(V.zoom,V.zoom);
+
+  drawMap();
+  drawRoute();
+  drawZones();
+  drawLinks();
+  drawPackets();
+  S.drones.forEach(d=>drawDrone(d));
+  S.elections.forEach(e=>drawElection(e));
+
+  ctx.restore();
+
+  // HUD (not zoomed)
+  ctx.fillStyle='rgba(74,102,128,0.65)';
+  ctx.font='10px Share Tech Mono, monospace';
+  ctx.textAlign='left';
+  ctx.fillText('ZOOM '+V.zoom.toFixed(2)+'x  |  scroll=zoom  ctrl+drag=pan  right-click=kill drone', 8, H-8);
+}
+
+function drawMap() {
+  // Tactical grid
+  const W=canvas.width/V.zoom, H=canvas.height/V.zoom;
+  const ox=-V.px/V.zoom, oy=-V.py/V.zoom;
+  const gridSize=50;
+
+  ctx.strokeStyle='rgba(26,45,69,0.5)';
+  ctx.lineWidth=0.5;
+  for (let x=Math.floor(ox/gridSize)*gridSize; x<ox+W+gridSize; x+=gridSize) {
+    ctx.beginPath(); ctx.moveTo(x,oy); ctx.lineTo(x,oy+H); ctx.stroke();
+  }
+  for (let y=Math.floor(oy/gridSize)*gridSize; y<oy+H+gridSize; y+=gridSize) {
+    ctx.beginPath(); ctx.moveTo(ox,y); ctx.lineTo(ox+W,y); ctx.stroke();
+  }
+
+  // Coordinate labels
+  ctx.fillStyle='rgba(74,102,128,0.4)';
+  ctx.font='9px Share Tech Mono, monospace';
+  ctx.textAlign='center';
+  for (let x=Math.floor(ox/gridSize)*gridSize; x<ox+W+gridSize; x+=gridSize*2) {
+    ctx.fillText(Math.round(x), x, oy+10);
+  }
+  ctx.textAlign='right';
+  for (let y=Math.floor(oy/gridSize)*gridSize; y<oy+H+gridSize; y+=gridSize*2) {
+    ctx.fillText(Math.round(y), ox+28, y+3);
+  }
+
+  // Compass rose (top-right of world)
+  const cx2=ox+W-40, cy2=oy+30;
+  ctx.strokeStyle='rgba(0,212,255,0.3)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(cx2,cy2-12); ctx.lineTo(cx2,cy2+12); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx2-12,cy2); ctx.lineTo(cx2+12,cy2); ctx.stroke();
+  ctx.fillStyle='rgba(0,212,255,0.5)';
+  ctx.font='9px Share Tech Mono, monospace'; ctx.textAlign='center';
+  ctx.fillText('N',cx2,cy2-15);
+}
+
+function drawRoute() {
+  if (S.route.length===0) return;
+
+  // Dashed route path
+  ctx.setLineDash([8,5]);
+  ctx.strokeStyle='rgba(0,232,122,0.6)';
+  ctx.lineWidth=1.5;
+  ctx.beginPath();
+  S.route.forEach((wp,i)=>{ i===0?ctx.moveTo(wp.x,wp.y):ctx.lineTo(wp.x,wp.y); });
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Waypoint markers
+  S.route.forEach((wp,i)=>{
+    ctx.beginPath(); ctx.arc(wp.x,wp.y,7,0,Math.PI*2);
+    ctx.fillStyle='rgba(0,232,122,0.15)'; ctx.fill();
+    ctx.strokeStyle='rgba(0,232,122,0.8)'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.fillStyle='rgba(0,232,122,0.9)';
+    ctx.font='bold 9px Share Tech Mono, monospace'; ctx.textAlign='center';
+    ctx.fillText('WP'+(i+1), wp.x, wp.y-11);
+
+    // Radius halo on last waypoint (target)
+    if (i===S.route.length-1) {
+      ctx.beginPath(); ctx.arc(wp.x,wp.y,24,0,Math.PI*2);
+      ctx.strokeStyle='rgba(0,232,122,0.25)'; ctx.lineWidth=1;
+      ctx.setLineDash([3,5]); ctx.stroke(); ctx.setLineDash([]);
+    }
+  });
+}
+
+function drawZones() {
+  S.zones.forEach(z=>{
+    const g=ctx.createRadialGradient(z.x,z.y,0,z.x,z.y,z.radius);
+    let sc, lc;
+    if (z.type==='jam'){sc='rgba(255,40,40,0.2)';lc='rgba(255,60,60,0.5)';}
+    else if (z.type==='gps'){sc='rgba(40,100,255,0.18)';lc='rgba(80,130,255,0.5)';}
+    else {sc='rgba(255,130,0,0.15)';lc='rgba(255,140,0,0.6)';}
+    g.addColorStop(0,sc); g.addColorStop(0.6,sc.replace('0.2','0.1').replace('0.18','0.09').replace('0.15','0.08')); g.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(z.x,z.y,z.radius,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle=lc; ctx.lineWidth=1; ctx.setLineDash([4,4]);
+    ctx.beginPath(); ctx.arc(z.x,z.y,z.radius,0,Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle=z.type==='jam'?'#ff4444':z.type==='gps'?'#8899ff':'#ffaa44';
+    ctx.font='10px Share Tech Mono, monospace'; ctx.textAlign='center';
+    const lbl=z.type==='jam'?'RF JAM':z.type==='gps'?'GPS DENY':'ATTACKER';
+    ctx.fillText(lbl, z.x, z.y-z.radius-5);
+  });
+}
+
+function drawLinks() {
+  S.links.forEach(lk=>{
+    const q=lk.q;
+    const col=q>0.65?'rgba(0,230,120,'+(0.15+q*0.3)+')':q>0.35?'rgba(255,165,0,'+(0.15+q*0.3)+')':'rgba(255,60,60,'+(0.12+q*0.25)+')';
+    ctx.strokeStyle=col; ctx.lineWidth=lk.isLeader?1.6:0.8;
+    if (!lk.isLeader) ctx.setLineDash([3,6]);
+    ctx.beginPath(); ctx.moveTo(lk.a.x,lk.a.y); ctx.lineTo(lk.b.x,lk.b.y); ctx.stroke();
+    ctx.setLineDash([]);
+  });
+}
+
+function drawPackets() {
+  S.packets.forEach(p=>{
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.sz||3,0,Math.PI*2);
+    ctx.fillStyle=p.col||'#00ffcc';
+    ctx.shadowColor=p.col||'#00ffcc'; ctx.shadowBlur=6;
+    ctx.fill(); ctx.shadowBlur=0;
+  });
+}
+
+function drawDrone(d) {
+  const r=RRAD[d.role]||8;
+  if (!d.alive) {
+    ctx.strokeStyle='rgba(80,10,10,0.7)'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(d.x-5,d.y-5); ctx.lineTo(d.x+5,d.y+5); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(d.x+5,d.y-5); ctx.lineTo(d.x-5,d.y+5); ctx.stroke();
+    return;
+  }
+
+  const col=d.color;
+  const sel=d.id===S.selectedId;
+
+  if (sel) {
+    ctx.strokeStyle='#ffffff'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.arc(d.x,d.y,r+7,0,Math.PI*2); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  if (d.electing && d.electPulse>0) {
+    const pr=r+(d.electPulse%1)*28, pa=1-(d.electPulse%1);
+    ctx.strokeStyle='rgba(255,220,0,'+pa*0.8+')'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(d.x,d.y,pr,0,Math.PI*2); ctx.stroke();
+  }
+
+  // Jammed halo
+  if (d.jammed) {
+    ctx.fillStyle='rgba(255,60,60,0.2)';
+    ctx.beginPath(); ctx.arc(d.x,d.y,r+5,0,Math.PI*2); ctx.fill();
+  }
+
+  ctx.shadowColor=col;
+  ctx.shadowBlur=d.electFlash>0?28:(d.role===ROLES.GL?16:8);
+  ctx.fillStyle=col;
+  ctx.beginPath();
+
+  if (d.role===ROLES.GL) {
+    ctx.moveTo(d.x,d.y-r*1.35); ctx.lineTo(d.x+r*1.1,d.y);
+    ctx.lineTo(d.x,d.y+r*1.35); ctx.lineTo(d.x-r*1.1,d.y); ctx.closePath();
+  } else if (d.role===ROLES.SH) {
+    for (let i=0;i<6;i++){const a=i/6*Math.PI*2-Math.PI/6; i?ctx.lineTo(d.x+r*Math.cos(a),d.y+r*Math.sin(a)):ctx.moveTo(d.x+r*Math.cos(a),d.y+r*Math.sin(a));}
+    ctx.closePath();
+  } else if (d.role===ROLES.RL) {
+    ctx.rect(d.x-r*0.9,d.y-r*0.9,r*1.8,r*1.8);
+  } else {
+    ctx.arc(d.x,d.y,r,0,Math.PI*2);
+  }
+  ctx.fill();
+  ctx.shadowBlur=0;
+
+  // AI indicator
+  if (d.aiEnabled) {
+    ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.font='bold '+(r*0.9)+'px Arial';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('*',d.x,d.y);
+  } else {
+    ctx.fillStyle=d.role===ROLES.GL?'#000':'rgba(0,0,0,0.75)';
+    ctx.font='bold '+(Math.max(7,r*0.75))+'px Rajdhani, sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(d.role,d.x,d.y);
+  }
+  ctx.textBaseline='alphabetic';
+
+  // ID label
+  ctx.fillStyle='rgba(180,210,230,0.6)';
+  ctx.font='8px Share Tech Mono, monospace'; ctx.textAlign='center';
+  ctx.fillText('#'+d.id,d.x,d.y-r-5);
+
+  // Battery indicator (colored ring segment)
+  const battAngle = (d.battery/100) * Math.PI*2;
+  const battCol = d.battery>40?'rgba(0,232,122,0.7)':d.battery>20?'rgba(255,144,0,0.8)':'rgba(255,59,59,0.9)';
+  ctx.strokeStyle=battCol; ctx.lineWidth=2.5;
+  ctx.beginPath(); ctx.arc(d.x,d.y,r+3.5,-Math.PI/2,-Math.PI/2+battAngle); ctx.stroke();
+}
+
+function drawElection(e) {
+  const alpha=Math.min(1,e.phase)*(1-Math.max(0,e.phase-2));
+  if (alpha<=0) return;
+  ctx.strokeStyle='rgba(255,220,0,'+alpha*0.8+')'; ctx.lineWidth=2;
+  const rr=15+e.phase*20;
+  ctx.beginPath(); ctx.arc(e.cx,e.cy,rr,0,Math.PI*2); ctx.stroke();
+  ctx.fillStyle='rgba(255,220,0,'+alpha+')';
+  ctx.font='bold 10px Share Tech Mono, monospace'; ctx.textAlign='center';
+  const lbl=e.resolved?('ELECTED #'+e.winnerId):'ELECTION';
+  ctx.fillText(lbl, e.cx, e.cy-rr-7);
+}
+
+// ---- Intel / Beacon packets ----------------------------------------------------------------
+function spawnIntel() {
+  S.drones.filter(d=>d.alive&&d.role===ROLES.W).forEach(w=>{
+    const sl=S.drones.find(d=>d.id===w.leaderId&&d.alive);
+    if (sl&&Math.random()<0.45) S.packets.push({from:w.id,to:sl.id,x:w.x,y:w.y,prog:0,col:'#39ff88',sz:2.5,spd:0.35+Math.random()*0.25});
+  });
+  S.drones.filter(d=>d.alive&&(d.role===ROLES.SL||d.role===ROLES.ASL)).forEach(sl=>{
+    const gl=S.drones.find(d=>d.alive&&(d.role===ROLES.GL));
+    if (gl&&Math.random()<0.65) S.packets.push({from:sl.id,to:gl.id,x:sl.x,y:sl.y,prog:0,col:'#00ffcc',sz:3,spd:0.45+Math.random()*0.2});
+  });
+}
+
+function spawnBeacons() {
+  S.drones.filter(d=>d.alive&&!d.jammed).forEach(d=>{
+    S.links.filter(l=>l.a.id===d.id||l.b.id===d.id).slice(0,2).forEach(lk=>{
+      const t=lk.a.id===d.id?lk.b:lk.a;
+      if (Math.random()<0.25) S.packets.push({from:d.id,to:t.id,x:d.x,y:d.y,prog:0,col:'rgba(100,180,255,0.6)',sz:1.5,spd:0.9});
+    });
+  });
+}
+
+// ---- Kill / Election ------------------------------------------------------------------------------
+function killDrone(id, reason) {
+  const d=S.drones.find(d=>d.id===id);
+  if (!d||!d.alive) return;
+  d.alive=false; d.health=0; S.lostCount++;
+  const sev=(d.role===ROLES.GL||d.role===ROLES.SL||d.role===ROLES.ASL)?'alert':'warn';
+  addLog(d.role+' #'+d.id+' LOST -- '+reason, sev);
+  if (d.role===ROLES.GL||d.role===ROLES.SL||d.role===ROLES.ASL) triggerElection(d);
+  if (S.selectedId===id) updateDroneInfoPanel();
+}
+
+function triggerElection(dead) {
+  const cands=S.drones.filter(d=>d.alive&&d.squadId===dead.squadId&&d.id!==dead.id);
+  if (!cands.length){addLog('Squad '+dead.squadId+' orphaned -- no candidates','alert');return;}
+  const shadow=cands.find(c=>c.shadowOf===dead.id);
+  cands.forEach(c=>{
+    c.score=c.health*0.5+(c.battery>40?20:-30)+(c.shadowOf===dead.id?40:0);
+    c.electing=true; c.electPulse=0;
+  });
+  cands.sort((a,b)=>b.score-a.score);
+  const win=cands[0];
+  const cx2=cands.reduce((s,c)=>s+c.x,0)/cands.length;
+  const cy2=cands.reduce((s,c)=>s+c.y,0)/cands.length;
+  S.elections.push({squadId:dead.squadId,winnerId:win.id,cx:cx2,cy:cy2,timer:1.4,phase:0,resolved:false});
+  S.electionCount++;
+  addLog('ELECTION -- Squad '+dead.squadId+' -- '+cands.length+' candidates','warn');
+  if (shadow) addLog('Shadow #'+shadow.id+' nominated (+40pts) -- state intact','warn');
+}
+
+function resolveElection(e) {
+  const win=S.drones.find(d=>d.id===e.winnerId);
+  if (!win||!win.alive) return;
+  const isGL=!S.drones.some(d=>d.alive&&d.role===ROLES.GL);
+  win.role=isGL?ROLES.GL:(S.cfg.aiSL?ROLES.ASL:ROLES.SL);
+  win.aiEnabled=isGL?S.cfg.aiGL:S.cfg.aiSL;
+  win.color=RCOL[win.role];
+  win.electing=false; win.electFlash=1.5; win.shadowOf=null;
+  S.drones.filter(d=>d.squadId===win.squadId).forEach(d=>d.electing=false);
+  // New shadow
+  if (S.cfg.shadowOn) {
+    const ns=S.drones.filter(d=>d.alive&&d.squadId===win.squadId&&d.id!==win.id&&d.role===ROLES.W).sort((a,b)=>b.health-a.health)[0];
+    if (ns){ns.role=ROLES.SH;ns.color=RCOL.SH;ns.shadowOf=win.id;ns.leaderId=win.id;addLog('#'+ns.id+' now Shadow -> '+win.role+' #'+win.id,'ok');}
+  }
+  addLog('ELECTED -- #'+win.id+' => '+win.role,'ok');
+  if (win.aiEnabled) addAILog(win.role,'POST-ELECT','Inherited mission state. Rebuilding squad plan. '+S.drones.filter(d=>d.alive&&d.squadId===win.squadId).length+' nodes active.');
+}
+
+// ---- Battery check ----------------------------------------------------------------------------------
+function checkBattAlerts() {
+  S.drones.filter(d=>d.alive&&d.battery<20&&d.battery>0).forEach(d=>{
+    addLog('LOW BATTERY '+Math.round(d.battery)+'% -- '+d.role+' #'+d.id,'warn');
+  });
+  const gl=S.drones.find(d=>d.alive&&d.role===ROLES.GL&&d.aiEnabled);
+  if (gl&&Math.random()<0.5) {
+    const a=S.drones.filter(d=>d.alive).length, tot=S.drones.length;
+    addAILog('GL','SITUATIONAL','Fleet '+Math.round(a/tot*100)+'% ('+a+'/'+tot+'). Links: '+S.links.length+'. Avg batt: '+Math.round(S.drones.filter(d=>d.alive).reduce((s,d)=>s+d.battery,0)/(a||1))+'%.');
+  }
+}
+
+// ---- Scenario buttons ----------------------------------------------------------------------------
+function killGroupLeader(){const g=S.drones.find(d=>d.alive&&d.role===ROLES.GL);g?killDrone(g.id,'Targeted strike'):addLog('No GL found','warn');}
+function killSquadLeader(){const sls=S.drones.filter(d=>d.alive&&(d.role===ROLES.SL||d.role===ROLES.ASL));sls.length?killDrone(sls[Math.floor(Math.random()*sls.length)].id,'Targeted strike'):addLog('No SL found','warn');}
+function killSquad(){
+  const sls=S.drones.filter(d=>d.alive&&(d.role===ROLES.SL||d.role===ROLES.ASL));
+  if (!sls.length) return;
+  const t=sls[Math.floor(Math.random()*sls.length)];
+  const sq=S.drones.filter(d=>d.squadId===t.squadId);
+  addLog('SQUAD '+t.squadId+' WIPE -- '+sq.length+' drones targeted','alert');
+  sq.forEach(d=>setTimeout(()=>killDrone(d.id,'Squad wipe'),Math.random()*900));
+}
+function rfStorm(){clearZones();S.zones.push({type:'jam',x:canvas.width*0.33,y:canvas.height*0.4,radius:155});S.zones.push({type:'jam',x:canvas.width*0.67,y:canvas.height*0.55,radius:120});addLog('RF STORM -- dual jam zones active','alert');}
+function gpsBlackout(){S.zones.push({type:'gps',x:canvas.width/2,y:canvas.height/2,radius:canvas.height*0.44});addLog('GPS BLACKOUT -- dead reckoning active','warn');const gl=S.drones.find(d=>d.alive&&d.role===ROLES.GL&&d.aiEnabled);if(gl)addAILog('GL','GPS_DENY','GPS lost. Dead reckoning enabled. Relay chain routing.');}
+function attackerStrike(){const x=Math.random()<0.5?canvas.width*0.2:canvas.width*0.8;S.zones.push({type:'attacker',x,y:canvas.height/2+(Math.random()-0.5)*100,radius:85,ang:Math.random()*Math.PI*2});addLog('HOSTILE DRONE detected','alert');}
+function clearZones(){S.zones=[];addLog('All zones cleared','ok');}
+function resetBattery(){S.drones.filter(d=>d.alive).forEach(d=>d.battery=88+Math.random()*12);addLog('Battery recharged -- all drones','ok');}
+function healAll(){S.drones.filter(d=>d.alive).forEach(d=>d.health=88+Math.random()*12);addLog('Health restored -- all drones','ok');}
+function clearRoute(){S.route=[];document.getElementById('route-info').style.display='none';addLog('Mission route cleared','ok');}
+
+// ---- Logging ----------------------------------------------------------------------------------------------
+let evCnt=0, aiCnt=0;
+function ts(){const m=String(Math.floor(S.missionTime/60)).padStart(2,'0');const s=String(Math.floor(S.missionTime%60)).padStart(2,'0');return m+':'+s;}
+function addLog(msg,type){
+  const el=document.getElementById('event-log');
+  const e=document.createElement('div'); e.className='lentry '+(type||'');
+  e.innerHTML='<span class="ts">'+ts()+'</span>'+msg;
+  el.insertBefore(e,el.firstChild);
+  if(++evCnt>100) el.removeChild(el.lastChild);
+}
+function addAILog(role,trig,reason){
+  const el=document.getElementById('decision-log');
+  const conf=(0.62+Math.random()*0.32).toFixed(2);
+  const e=document.createElement('div'); e.className='lentry ai';
+  e.innerHTML='<span class="ts">'+ts()+'</span><strong style="color:var(--asl)">['+role+']</strong> <span style="color:var(--warn)">'+trig+'</span><br><span style="color:rgba(180,200,220,0.8);font-size:9px">'+reason+'</span><br><span style="color:var(--muted);font-size:8px">conf='+conf+' escalate=false</span>';
+  el.insertBefore(e,el.firstChild);
+  if(++aiCnt>50) el.removeChild(el.lastChild);
+}
+
+// ---- Drone info panel ----------------------------------------------------------------------------
+function updateDroneInfoPanel() {
+  const panel=document.getElementById('drone-info');
+  const d=S.selectedId?S.drones.find(d=>d.id===S.selectedId):null;
+  if (!d){panel.innerHTML='<div style="padding:18px;color:var(--muted);font-family:\'Share Tech Mono\',monospace;font-size:11px">Click a drone to inspect</div>';return;}
+  const hc=d.health>60?'var(--ok)':d.health>30?'var(--warn)':'var(--alert)';
+  const bc=d.battery>40?'var(--ok)':d.battery>20?'var(--warn)':'var(--alert)';
+  const hw=d.hw||{};
+  const ail=AI_LEVEL_DESC[hw.aiLevel||0];
+  const missions=(hw.missionTypes||[]).map(m=>'<span style="font-size:9px;padding:1px 5px;background:rgba(0,0,0,0.4);border:1px solid '+(MISSION_COLORS[m]||'#444')+';color:'+(MISSION_COLORS[m]||'#888')+';margin:1px 2px;display:inline-block">'+m+'</span>').join('');
+  panel.innerHTML=
+    '<div class="dstat"><div class="dsl">Identity</div>'+
+    '<div class="dsv" style="color:'+d.color+'">'+d.role+' #'+d.id+'</div>'+
+    '<div style="font-size:10px;color:var(--muted)">Squad '+d.squadId+' &middot; '+(d.alive?'<span style="color:var(--ok)">ALIVE</span>':'<span style="color:var(--alert)">DESTROYED</span>')+'</div>'+
+    (d.shadowOf?'<div style="color:var(--sh);font-size:10px">Shadow &rarr; #'+d.shadowOf+'</div>':'')+
+    '</div>'+
+    '<div class="dstat" style="background:rgba(0,10,20,0.4)">'+
+    '<div class="dsl" style="color:var(--gl)">'+hw.name+'</div>'+
+    '<div style="font-size:9px;color:var(--muted);margin-bottom:6px">'+hw.class+'</div>'+
+    '<div class="sc-row"><span class="sk">CPU</span><span class="sv" style="font-size:9px;color:var(--text)">'+hw.cpu+'</span></div>'+
+    '<div class="sc-row"><span class="sk">GPU/NPU</span><span class="sv" style="font-size:9px;color:var(--text)">'+hw.gpu+'</span></div>'+
+    '<div class="sc-row"><span class="sk">RAM</span><span class="sv">'+hw.ram+'</span></div>'+
+    '<div class="sc-row"><span class="sk">Comms</span><span class="sv" style="font-size:9px;color:var(--text)">'+hw.comms+'</span></div>'+
+    '</div>'+
+    '<div class="dstat">'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-bottom:6px">'+
+    '<div style="text-align:center"><div class="dsl">Carry</div><div class="dsv" style="font-size:12px">'+hw.carryKg+'kg</div></div>'+
+    '<div style="text-align:center"><div class="dsl">Air Time</div><div class="dsv" style="font-size:12px">'+hw.airtimeMin+'min</div></div>'+
+    '<div style="text-align:center"><div class="dsl">Alt Max</div><div class="dsv" style="font-size:12px">'+hw.maxAltM+'m</div></div>'+
+    '<div style="text-align:center"><div class="dsl">Speed</div><div class="dsv" style="font-size:12px">'+hw.speedKmh+'km/h</div></div>'+
+    '<div style="text-align:center"><div class="dsl">Weight</div><div class="dsv" style="font-size:12px">'+hw.weightKg+'kg</div></div>'+
+    '<div style="text-align:center"><div class="dsl">RF Mult</div><div class="dsv" style="font-size:12px">'+hw.rfRangeMult+'x</div></div>'+
+    '</div>'+
+    '<div class="dsl" style="margin-bottom:3px">AI Capability</div>'+
+    '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">'+
+    '<span style="font-family:\'Share Tech Mono\',monospace;font-size:11px;color:'+ail.color+';font-weight:700">'+ail.label+'</span>'+
+    '<div style="flex:1;height:4px;background:var(--border);border-radius:2px"><div style="width:'+((hw.aiLevel||0)/4*100)+'%;height:100%;background:'+ail.color+';border-radius:2px"></div></div>'+
+    '</div>'+
+    '<div style="font-size:9px;color:var(--muted);line-height:1.4;margin-bottom:6px">'+hw.aiDesc+'</div>'+
+    '<div class="dsl" style="margin-bottom:3px">Mission Types</div>'+
+    '<div>'+missions+'</div>'+
+    '</div>'+
+    '<div class="dstat"><div class="dsr">'+
+    '<div><div class="dsl">Health</div><div class="dsv" style="color:'+hc+'">'+Math.round(d.health)+'%</div></div>'+
+    '<div><div class="dsl">Battery</div><div class="dsv" style="color:'+bc+'">'+Math.round(d.battery)+'%</div></div>'+
+    '<div><div class="dsl">Links</div><div class="dsv">'+S.links.filter(l=>l.a.id===d.id||l.b.id===d.id).length+'</div></div>'+
+    '</div>'+
+    '<div class="hbar" style="margin-top:5px"><div class="hfill" style="width:'+d.battery+'%;background:'+bc+'"></div></div>'+
+    '</div>'+
+    '<div class="dstat"><div class="dsr">'+
+    '<div><div class="dsl">RF</div><div class="dsv" style="color:'+(d.jammed?'var(--alert)':'var(--ok)')+'">'+( d.jammed?'JAMMED':'CLEAR')+'</div></div>'+
+    '<div><div class="dsl">GPS</div><div class="dsv" style="color:'+(d.gpsLost?'var(--warn)':'var(--ok)')+'">'+( d.gpsLost?'DENIED':'OK')+'</div></div>'+
+    '<div><div class="dsl">Task</div><div class="dsv">'+Math.round(d.taskProgress)+'%</div></div>'+
+    '</div></div>'+
+    (d.alive?'<div style="padding:7px 11px"><button onclick="killDrone('+d.id+',\'Manual kill\')" class="danger" style="width:100%">DESTROY #'+d.id+'</button></div>':'');
+}
+
+// ---- Tabs ----------------------------------------------------------------------------------------------------
+function showTab(n){
+  ['events','decisions','drone'].forEach((t,i)=>{
+    document.querySelectorAll('.tab')[i].classList.toggle('active',t===n);
+    document.getElementById(['event-log','decision-log','drone-info'][i]).classList.toggle('active',t===n);
+  });
+  if (n==='drone') updateDroneInfoPanel();
+}
+
+// ---- Place mode ----------------------------------------------------------------------------------------
+function setPlaceMode(mode) {
+  S.placeMode=mode;
+  const ind=document.getElementById('mode-indicator');
+  if (mode) {
+    const lbl=mode==='route'?'Click to add waypoints (right-click to finish)':('Click to place '+mode.toUpperCase()+' zone  |  ESC cancel');
+    ind.textContent=lbl; ind.style.opacity='1';
+  } else { ind.style.opacity='0'; }
+  ['mode-route','mode-jam','mode-gps','mode-atk'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.classList.remove('active');
+  });
+  if (mode) {const m={'route':'mode-route','jam':'mode-jam','gps':'mode-gps','attacker':'mode-atk'};const el=document.getElementById(m[mode]);if(el)el.classList.add('active');}
+}
+
+// ---- Zoom / Pan ----------------------------------------------------------------------------------------
+canvas.addEventListener('wheel', e=>{
+  e.preventDefault();
+  const r=canvas.getBoundingClientRect();
+  const sx=canvas.width/r.width, sy=canvas.height/r.height;
+  const cx=(e.clientX-r.left)*sx, cy=(e.clientY-r.top)*sy;
+  const f=e.deltaY<0?1.12:1/1.12;
+  const nz=Math.max(0.2,Math.min(6,V.zoom*f));
+  V.px=cx-(cx-V.px)*(nz/V.zoom); V.py=cy-(cy-V.py)*(nz/V.zoom); V.zoom=nz;
+},{passive:false});
+
+canvas.addEventListener('mousedown', e=>{
+  if (e.button===1||(e.button===0&&e.ctrlKey)){
+    e.preventDefault(); V.dragging=true;
+    V.dx=e.clientX; V.dy=e.clientY; V.dpx=V.px; V.dpy=V.py;
+    canvas.style.cursor='grabbing';
+  }
+});
+window.addEventListener('mousemove', e=>{
+  if (!V.dragging) return;
+  const r=canvas.getBoundingClientRect();
+  const sx=canvas.width/r.width, sy=canvas.height/r.height;
+  V.px=V.dpx+(e.clientX-V.dx)*sx; V.py=V.dpy+(e.clientY-V.dy)*sy;
+});
+window.addEventListener('mouseup', ()=>{ if(V.dragging){V.dragging=false;canvas.style.cursor='crosshair';} });
+
+function zoomIn(){V.zoom=Math.min(6,V.zoom*1.25);}
+function zoomOut(){V.zoom=Math.max(0.2,V.zoom/1.25);}
+function resetZoom(){V.zoom=1;V.px=0;V.py=0;}
+
+// ---- Click interaction --------------------------------------------------------------------------
+function getMouseWorld(e) {
+  const r=canvas.getBoundingClientRect();
+  const sx=canvas.width/r.width, sy=canvas.height/r.height;
+  const cx=(e.clientX-r.left)*sx, cy=(e.clientY-r.top)*sy;
+  return toWorld(cx,cy);
+}
+
+canvas.addEventListener('click', e=>{
+  if (V.dragging) return;
+  const {x:wx,y:wy}=getMouseWorld(e);
+
+  if (S.placeMode==='route') {
+    S.route.push({x:wx,y:wy});
+    document.getElementById('route-info').style.display='block';
+    addLog('Waypoint WP'+S.route.length+' set at ('+Math.round(wx)+','+Math.round(wy)+')','ok');
+    // Assign workers to new route
+    S.drones.filter(d=>d.alive&&d.role===ROLES.W).forEach(d=>d.routeTarget=0);
+    const gl=S.drones.find(d=>d.alive&&d.role===ROLES.GL&&d.aiEnabled);
+    if (gl&&S.route.length===1) addAILog('GL','ROUTE_UPDATE','New mission route received. WP1 locked at ('+Math.round(wx)+','+Math.round(wy)+'). Redistributing worker tasks.');
+    return;
+  }
+
+  if (S.placeMode&&S.placeMode!=='route') {
+    const radius=S.placeMode==='jam'?125:S.placeMode==='gps'?175:85;
+    S.zones.push({type:S.placeMode,x:wx,y:wy,radius});
+    addLog(S.placeMode.toUpperCase()+' zone placed','warn');
+    setPlaceMode(null);
+    return;
+  }
+
+  // Select drone
+  const hitR=20/V.zoom;
+  let closest=null, minD=hitR;
+  S.drones.forEach(d=>{const dd=dist2(d.x,d.y,wx,wy);if(dd<minD){minD=dd;closest=d;}});
+  S.selectedId=closest?closest.id:null;
+  if (closest){showTab('drone');updateDroneInfoPanel();}
+});
+
+canvas.addEventListener('contextmenu', e=>{
+  e.preventDefault();
+  if (S.placeMode==='route'){setPlaceMode(null);addLog('Route entry complete -- '+S.route.length+' waypoints','ok');return;}
+  const {x:wx,y:wy}=getMouseWorld(e);
+  const hitR=20/V.zoom;
+  let closest=null, minD=hitR;
+  S.drones.forEach(d=>{if(!d.alive)return;const dd=dist2(d.x,d.y,wx,wy);if(dd<minD){minD=dd;closest=d;}});
+  if (closest) killDrone(closest.id,'Right-click kill');
+});
+
+// ---- Controls --------------------------------------------------------------------------------------------
+function togglePause(){S.paused=!S.paused;const b=document.getElementById('btn-pause');b.textContent=S.paused?'RESUME':'&#9646;&#9646; PAUSE';b.classList.toggle('active',S.paused);}
+function setSpeed(s){S.speed=s;['sp-05','sp-1','sp-2','sp-5'].forEach(id=>document.getElementById(id).classList.remove('active'));const m={0.5:'sp-05',1:'sp-1',2:'sp-2',5:'sp-5'};document.getElementById(m[s]).classList.add('active');}
+
+function updateFleetConfig(){
+  const c=S.cfg;
+  c.squads=+document.getElementById('cfg-squads').value;
+  c.workers=+document.getElementById('cfg-workers').value;
+  c.relays=+document.getElementById('cfg-relays').value;
+  c.aiGL=document.getElementById('ai-gl').checked;
+  c.aiSL=document.getElementById('ai-sl').checked;
+  c.shadowOn=document.getElementById('shadow-on').checked;
+  c.hwGL=document.getElementById('hw-gl').value;
+  c.hwSL=document.getElementById('hw-sl').value;
+  c.hwWorker=document.getElementById('hw-worker').value;
+  c.hwRelay=document.getElementById('hw-relay').value;
+  document.getElementById('val-squads').textContent=c.squads;
+  document.getElementById('val-workers').textContent=c.workers;
+  document.getElementById('val-relays').textContent=c.relays;
+  resetSim();
+}
+
+function updateEnv(){
+  S.cfg.rfRange=+document.getElementById('cfg-range').value;
+  S.cfg.noise=+document.getElementById('cfg-noise').value;
+  S.cfg.battDrain=+document.getElementById('cfg-drain').value;
+  document.getElementById('val-range').textContent=S.cfg.rfRange;
+  document.getElementById('val-noise').textContent=S.cfg.noise;
+  document.getElementById('val-drain').textContent=S.cfg.battDrain;
+}
+
+function resetSim(){
+  S.paused=false;
+  document.getElementById('btn-pause').textContent='&#9646;&#9646; PAUSE';
+  document.getElementById('btn-pause').classList.remove('active');
+  document.getElementById('event-log').innerHTML='';
+  document.getElementById('decision-log').innerHTML='';
+  evCnt=0; aiCnt=0; S.zones=[];
+  initSim();
+}
+
+// ---- Periodic AI --------------------------------------------------------------------------------------
+setInterval(()=>{
+  if (S.paused) return;
+  const ais=S.drones.filter(d=>d.alive&&d.aiEnabled);
+  if (!ais.length) return;
+  const msgs=[
+    ['THREAT_ASSESS','Threat map updated. Rerouting squad around jamming corridor.'],
+    ['FORMATION','Distributing worker coverage to maintain mesh connectivity.'],
+    ['INTEL_FUSION','Aggregating sensor data. No critical anomalies. Flushing intel buffer.'],
+    ['BATTERY_MGT','Low battery cluster detected. Reducing patrol radius. Shadow on standby.'],
+    ['MESH_OPT','Routing table updated. Relay repositioned to close coverage gap.'],
+    ['ROUTE_ADAPT','Route waypoint assessment complete. Adjusting squad assignments.'],
+  ];
+  const [tr,re]=msgs[Math.floor(Math.random()*msgs.length)];
+  const l=ais[Math.floor(Math.random()*ais.length)];
+  addAILog(l.role,tr,re);
+},9000);
+
+// ---- Utils --------------------------------------------------------------------------------------------------
+function dist2(x1,y1,x2,y2){return Math.sqrt((x2-x1)**2+(y2-y1)**2);}
+
+// ---- Key bindings ------------------------------------------------------------------------------------
+document.addEventListener('keydown',e=>{
+  if (e.key==='Escape') setPlaceMode(null);
+  if (e.key===' '&&e.target===document.body){e.preventDefault();togglePause();}
+  if (e.key==='+') zoomIn();
+  if (e.key==='-') zoomOut();
+  if (e.key==='0') resetZoom();
+});
+
+// ---- Boot ----------------------------------------------------------------------------------------------------
+window.addEventListener('resize',()=>{clearTimeout(window._rt);window._rt=setTimeout(resizeCanvas,200);});
+resizeCanvas();
+requestAnimationFrame(loop);
+
+
+// ---- Spec Modal ----------------------------------------------------------------------------------------
+function openSpecModal() {
+  const grid = document.getElementById('spec-grid');
+  grid.innerHTML = '';
+  Object.entries(DRONE_TYPES).forEach(([key, hw]) => {
+    const ail = AI_LEVEL_DESC[hw.aiLevel||0];
+    const missions = (hw.missionTypes||[]).map(m =>
+      '<span style="font-size:9px;padding:1px 5px;background:rgba(0,0,0,0.4);border:1px solid '+(MISSION_COLORS[m]||'#444')+';color:'+(MISSION_COLORS[m]||'#888')+';margin:1px 2px;display:inline-block">'+m+'</span>'
+    ).join('');
+    const isSelected = [S.cfg.hwGL, S.cfg.hwSL, S.cfg.hwWorker, S.cfg.hwRelay].includes(key);
+    const card = document.createElement('div');
+    card.className = 'spec-card' + (isSelected ? ' selected' : '');
+    card.innerHTML =
+      '<div class="sc-name" style="color:'+hw.color+'">'+hw.name+'</div>'+
+      '<div class="sc-class">'+hw.class+'</div>'+
+      '<div class="sc-row"><span class="sk">CPU</span><span class="sv" style="font-size:9px">'+hw.cpu+'</span></div>'+
+      '<div class="sc-row"><span class="sk">GPU / NPU</span><span class="sv" style="font-size:9px">'+hw.gpu+'</span></div>'+
+      '<div class="sc-row"><span class="sk">RAM</span><span class="sv">'+hw.ram+'</span></div>'+
+      '<div class="sc-row"><span class="sk">Comms</span><span class="sv" style="font-size:9px">'+hw.comms+'</span></div>'+
+      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin:8px 0">'+
+      ['Carry|'+hw.carryKg+'kg','Air|'+hw.airtimeMin+'min','Alt|'+hw.maxAltM+'m','Speed|'+hw.speedKmh+'kph','Mass|'+hw.weightKg+'kg','RF|'+hw.rfRangeMult+'x'].map(s=>{
+        const [k,v]=s.split('|');
+        return '<div style="text-align:center;background:rgba(0,0,0,0.3);padding:3px"><div style="font-size:8px;color:var(--muted);text-transform:uppercase">'+k+'</div><div style="font-family:Share Tech Mono,monospace;font-size:11px;color:var(--text)">'+v+'</div></div>';
+      }).join('')+
+      '</div>'+
+      '<div class="cap-row"><div class="cap-label">AI Level</div>'+
+      '<div style="display:flex;align-items:center;gap:6px;margin-top:3px">'+
+      '<span style="font-family:Share Tech Mono,monospace;font-size:10px;color:'+ail.color+';min-width:60px">'+ail.label+'</span>'+
+      '<div style="flex:1;height:4px;background:var(--border);border-radius:2px"><div style="width:'+((hw.aiLevel||0)/4*100)+'%;height:100%;background:'+ail.color+';border-radius:2px"></div></div>'+
+      '</div><div style="font-size:9px;color:var(--muted);margin-top:3px;line-height:1.4">'+hw.aiDesc+'</div></div>'+
+      '<div style="margin-top:6px"><div class="cap-label" style="margin-bottom:3px">Missions</div>'+missions+'</div>';
+    grid.appendChild(card);
+  });
+  document.getElementById('spec-modal').classList.add('open');
+}
+function closeSpecModal() {
+  document.getElementById('spec-modal').classList.remove('open');
+}
+document.addEventListener('keydown', e => { if (e.key==='Escape') closeSpecModal(); });
+
+// ---- Global tooltip --------------------------------------------------------------------------------
+(function() {
+  const tip = document.getElementById('global-tip');
+  document.addEventListener('mouseover', function(e) {
+    const icon = e.target.closest('.info-icon');
+    if (!icon || !icon.dataset.tip) { tip.style.display = 'none'; return; }
+    tip.innerHTML = icon.dataset.tip;
+    tip.style.display = 'block';
+    positionTip(e);
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!e.target.closest('.info-icon')) return;
+    positionTip(e);
+  });
+  document.addEventListener('mouseout', function(e) {
+    if (!e.target.closest('.info-icon')) return;
+    tip.style.display = 'none';
+  });
+  function positionTip(e) {
+    const margin = 12;
+    const tw = 210, th = tip.offsetHeight || 100;
+    let x = e.clientX + margin;
+    let y = e.clientY - th / 2;
+    if (x + tw > window.innerWidth - 8) x = e.clientX - tw - margin;
+    if (y < 8) y = 8;
+    if (y + th > window.innerHeight - 8) y = window.innerHeight - th - 8;
+    tip.style.left = x + 'px';
+    tip.style.top = y + 'px';
+  }
+})();
+
+</script>
+
+<!-- DRONE SPEC MODAL -->
+<div id="spec-modal">
+  <div id="spec-box">
+    <div id="spec-header">
+      <h2>DRONE HARDWARE CATALOG</h2>
+      <button id="spec-close" onclick="closeSpecModal()">&#x2715; CLOSE</button>
+    </div>
+    <div id="spec-grid"></div>
+  </div>
+</div>
+
+</body>
+</html>

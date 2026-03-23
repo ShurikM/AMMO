@@ -1,0 +1,23 @@
+{
+  "name": "RF Denied",
+  "description": "RF-denied environment \u2014 short range, high noise, relay-heavy fleet",
+  "version": "0.4",
+  "cfg": {
+    "squads": 2,
+    "workers": 4,
+    "relays": 6,
+    "aiGL": true,
+    "aiSL": false,
+    "shadowOn": true,
+    "rfRange": 70,
+    "noise": 50,
+    "battDrain": 5,
+    "hwGL": "COMMAND_NODE",
+    "hwSL": "JETSON_NX",
+    "hwWorker": "RPI5",
+    "hwRelay": "ESP32_MESH"
+  },
+  "zones": [],
+  "route": [],
+  "savedAt": "2026-03-23T00:00:00.000Z"
+}

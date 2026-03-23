@@ -1,0 +1,25 @@
+{
+  "name": "ammo-simulator",
+  "version": "0.4.0",
+  "type": "module",
+  "description": "Aerial Mesh Mission Orchestration — Autonomous drone swarm simulation platform for testing hierarchical mesh protocols and fleet survivability",
+  "keywords": ["drone", "swarm", "simulation", "mesh-network", "autonomous", "uav", "uas", "leader-election", "protocol", "digital-twin"],
+  "homepage": "https://shurikm.github.io/ammo/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ShurikM/AMMO.git"
+  },
+  "license": "MIT",
+  "author": "ShurikM",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
+  },
+  "dependencies": {
+    "leaflet": "^1.9.4"
+  }
+}
