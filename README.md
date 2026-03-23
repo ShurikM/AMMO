@@ -41,6 +41,11 @@ The platform answers questions that matter for real swarm deployments: *"What ha
 - Auto-transitions based on fleet position (60% workers at waypoint) and casualty thresholds (50% loss triggers egress)
 - Mission completion tracking with phase timing log
 
+<p align="center">
+  <img src="docs/screenshots/mission-active.png" alt="Active Mission" width="100%">
+  <br><em>Fleet executing a multi-waypoint mission with real-time phase tracking</em>
+</p>
+
 ### Real-Time Metrics & Analytics
 
 - Live KPIs: MTTR, Mesh Uptime %, Fleet Survival %, Shadow Win Rate, p99 Election Recovery
@@ -48,12 +53,22 @@ The platform answers questions that matter for real swarm deployments: *"What ha
 - BFS-based mesh partition detection from GL node
 - JSON export for post-analysis
 
+<p align="center">
+  <img src="docs/screenshots/metrics-dashboard.png" alt="Metrics Dashboard" width="100%">
+  <br><em>Live KPIs and 4 canvas-rendered charts tracking fleet health in real time</em>
+</p>
+
 ### Batch Simulation Engine
 
 - Fully headless simulation — DOM-independent, runs in pure JS
 - Seeded PRNG (mulberry32) for deterministic, reproducible runs
 - Parameter sweep across workers, squads, noise, battery drain, RF range
 - Chunked execution (3 runs per frame) to keep UI responsive during batch
+
+<p align="center">
+  <img src="docs/screenshots/batch-simulation.png" alt="Batch Simulation" width="100%">
+  <br><em>Parameter sweep across fleet configurations with seeded PRNG for reproducibility</em>
+</p>
 
 ### Protocol Verification & Assertions
 
@@ -75,6 +90,11 @@ The platform answers questions that matter for real swarm deployments: *"What ha
 - Canvas-over-map dual-layer architecture
 - Pixel <-> lat/lng coordinate bridge
 - Real-world terrain context for mission planning
+
+<p align="center">
+  <img src="docs/screenshots/map-mode.png" alt="Map Mode" width="100%">
+  <br><em>Leaflet/OpenStreetMap overlay with canvas-over-map dual-layer rendering</em>
+</p>
 
 ## Architecture
 
@@ -106,6 +126,11 @@ src/
 ```
 
 ## Hardware Catalog
+
+<p align="center">
+  <img src="docs/screenshots/hardware-catalog.png" alt="Hardware Catalog" width="100%">
+  <br><em>9 drone platforms from 64 GB Jetson AGX Orin to 520 KB ESP32 mesh relay</em>
+</p>
 
 9 simulated drone platforms spanning the full compute spectrum:
 
@@ -231,6 +256,28 @@ Then in the simulator:
 ## Contributing
 
 Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
+
+## Gallery
+
+<details>
+<summary>Click to expand all screenshots</summary>
+
+### Fleet Deployment
+<img src="docs/screenshots/fleet-deployed.png" alt="Fleet Deployed" width="100%">
+
+### AI Decision Log
+<img src="docs/screenshots/ai-log.png" alt="AI Decision Log" width="100%">
+
+### Protocol Assertions
+<img src="docs/screenshots/assertions.png" alt="Protocol Assertions" width="100%">
+
+### Fault Injection
+<img src="docs/screenshots/fault-injection.png" alt="Fault Injection" width="100%">
+
+### Leader Election
+<img src="docs/screenshots/leader-election.png" alt="Leader Election" width="100%">
+
+</details>
 
 ## License
 
